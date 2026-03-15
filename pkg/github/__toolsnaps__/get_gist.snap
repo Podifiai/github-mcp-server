@@ -16,5 +16,65 @@
     ],
     "type": "object"
   },
-  "name": "get_gist"
+  "name": "get_gist",
+  "outputSchema": {
+    "properties": {
+      "created_at": {
+        "type": "string"
+      },
+      "description": {
+        "type": "string"
+      },
+      "files": {
+        "additionalProperties": {
+          "properties": {
+            "filename": {
+              "type": "string"
+            },
+            "language": {
+              "type": "string"
+            },
+            "size": {
+              "type": "integer"
+            },
+            "type": {
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "type": "object"
+      },
+      "html_url": {
+        "type": "string"
+      },
+      "id": {
+        "type": "string"
+      },
+      "owner": {
+        "properties": {
+          "avatar_url": {
+            "type": "string"
+          },
+          "id": {
+            "type": "integer"
+          },
+          "login": {
+            "type": "string"
+          },
+          "profile_url": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "public": {
+        "type": "boolean"
+      },
+      "updated_at": {
+        "type": "string"
+      }
+    },
+    "type": "object"
+  }
 }

@@ -53,5 +53,41 @@
     ],
     "type": "object"
   },
-  "name": "list_code_scanning_alerts"
+  "name": "list_code_scanning_alerts",
+  "outputSchema": {
+    "properties": {
+      "alerts": {
+        "items": {
+          "properties": {
+            "html_url": {
+              "type": "string"
+            },
+            "number": {
+              "type": "integer"
+            },
+            "rule": {
+              "properties": {
+                "description": {
+                  "type": "string"
+                },
+                "id": {
+                  "type": "string"
+                },
+                "severity": {
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "state": {
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "type": "array"
+      }
+    },
+    "type": "object"
+  }
 }

@@ -25,6 +25,24 @@ const (
 	FilterOnlyParticipating = "only_participating"
 )
 
+type ListNotificationsResult struct {
+	Notifications []struct {
+		ID      string `json:"id"`
+		Reason  string `json:"reason"`
+		Unread  bool   `json:"unread"`
+		Subject struct {
+			Title string `json:"title"`
+			Type  string `json:"type"`
+			URL   string `json:"url"`
+		} `json:"subject"`
+		Repository struct {
+			ID       int64  `json:"id"`
+			FullName string `json:"full_name"`
+			HTMLURL  string `json:"html_url"`
+		} `json:"repository"`
+	} `json:"notifications"`
+}
+
 // ListNotifications creates a tool to list notifications for the current user.
 func ListNotifications(t translations.TranslationHelperFunc) inventory.ServerTool {
 	return NewTool(
@@ -62,9 +80,41 @@ func ListNotifications(t translations.TranslationHelperFunc) inventory.ServerToo
 					},
 				},
 			}),
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"notifications": {
+						Type: "array",
+						Items: &jsonschema.Schema{
+							Type: "object",
+							Properties: map[string]*jsonschema.Schema{
+								"id":     {Type: "string"},
+								"reason": {Type: "string"},
+								"unread": {Type: "boolean"},
+								"subject": {
+									Type: "object",
+									Properties: map[string]*jsonschema.Schema{
+										"title": {Type: "string"},
+										"type":  {Type: "string"},
+										"url":   {Type: "string"},
+									},
+								},
+								"repository": {
+									Type: "object",
+									Properties: map[string]*jsonschema.Schema{
+										"id":        {Type: "integer"},
+										"full_name": {Type: "string"},
+										"html_url":  {Type: "string"},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
 		},
 		[]scopes.Scope{scopes.Notifications},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *ListNotificationsResult, error) {
 			client, err := deps.GetClient(ctx)
 			if err != nil {
 				return utils.NewToolResultErrorFromErr("failed to get GitHub client", err), nil, nil
@@ -157,9 +207,19 @@ func ListNotifications(t translations.TranslationHelperFunc) inventory.ServerToo
 				return utils.NewToolResultErrorFromErr("failed to marshal response", err), nil, nil
 			}
 
-			return utils.NewToolResultText(string(r)), nil, nil
+			// Wrap in struct for typed result
+			typedResult := ListNotificationsResult{}
+			if err := json.Unmarshal(r, &typedResult.Notifications); err != nil {
+				return utils.NewToolResultErrorFromErr("failed to unmarshal response", err), nil, nil
+			}
+
+			return utils.NewToolResultText(string(r)), &typedResult, nil
 		},
 	)
+}
+
+type DismissNotificationResult struct {
+	Message string `json:"message"`
 }
 
 // DismissNotification creates a tool to mark a notification as read/done.
@@ -188,9 +248,15 @@ func DismissNotification(t translations.TranslationHelperFunc) inventory.ServerT
 				},
 				Required: []string{"threadID", "state"},
 			},
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"message": {Type: "string"},
+				},
+			},
 		},
 		[]scopes.Scope{scopes.Notifications},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *DismissNotificationResult, error) {
 			client, err := deps.GetClient(ctx)
 			if err != nil {
 				return utils.NewToolResultErrorFromErr("failed to get GitHub client", err), nil, nil
@@ -239,9 +305,15 @@ func DismissNotification(t translations.TranslationHelperFunc) inventory.ServerT
 				return ghErrors.NewGitHubAPIStatusErrorResponse(ctx, fmt.Sprintf("failed to mark notification as %s", state), resp, body), nil, nil
 			}
 
-			return utils.NewToolResultText(fmt.Sprintf("Notification marked as %s", state)), nil, nil
+			message := fmt.Sprintf("Notification marked as %s", state)
+			typedResult := &DismissNotificationResult{Message: message}
+			return utils.NewToolResultText(message), typedResult, nil
 		},
 	)
+}
+
+type MarkAllNotificationsReadResult struct {
+	Message string `json:"message"`
 }
 
 // MarkAllNotificationsRead creates a tool to mark all notifications as read.
@@ -272,9 +344,15 @@ func MarkAllNotificationsRead(t translations.TranslationHelperFunc) inventory.Se
 					},
 				},
 			},
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"message": {Type: "string"},
+				},
+			},
 		},
 		[]scopes.Scope{scopes.Notifications},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *MarkAllNotificationsReadResult, error) {
 			client, err := deps.GetClient(ctx)
 			if err != nil {
 				return utils.NewToolResultErrorFromErr("failed to get GitHub client", err), nil, nil
@@ -331,9 +409,27 @@ func MarkAllNotificationsRead(t translations.TranslationHelperFunc) inventory.Se
 				return ghErrors.NewGitHubAPIStatusErrorResponse(ctx, "failed to mark all notifications as read", resp, body), nil, nil
 			}
 
-			return utils.NewToolResultText("All notifications marked as read"), nil, nil
+			message := "All notifications marked as read"
+			typedResult := &MarkAllNotificationsReadResult{Message: message}
+			return utils.NewToolResultText(message), typedResult, nil
 		},
 	)
+}
+
+type GetNotificationDetailsResult struct {
+	ID      string `json:"id"`
+	Reason  string `json:"reason"`
+	Unread  bool   `json:"unread"`
+	Subject struct {
+		Title string `json:"title"`
+		Type  string `json:"type"`
+		URL   string `json:"url"`
+	} `json:"subject"`
+	Repository struct {
+		ID       int64  `json:"id"`
+		FullName string `json:"full_name"`
+		HTMLURL  string `json:"html_url"`
+	} `json:"repository"`
 }
 
 // GetNotificationDetails creates a tool to get details for a specific notification.
@@ -357,9 +453,33 @@ func GetNotificationDetails(t translations.TranslationHelperFunc) inventory.Serv
 				},
 				Required: []string{"notificationID"},
 			},
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"id":     {Type: "string"},
+					"reason": {Type: "string"},
+					"unread": {Type: "boolean"},
+					"subject": {
+						Type: "object",
+						Properties: map[string]*jsonschema.Schema{
+							"title": {Type: "string"},
+							"type":  {Type: "string"},
+							"url":   {Type: "string"},
+						},
+					},
+					"repository": {
+						Type: "object",
+						Properties: map[string]*jsonschema.Schema{
+							"id":        {Type: "integer"},
+							"full_name": {Type: "string"},
+							"html_url":  {Type: "string"},
+						},
+					},
+				},
+			},
 		},
 		[]scopes.Scope{scopes.Notifications},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *GetNotificationDetailsResult, error) {
 			client, err := deps.GetClient(ctx)
 			if err != nil {
 				return utils.NewToolResultErrorFromErr("failed to get GitHub client", err), nil, nil
@@ -393,7 +513,13 @@ func GetNotificationDetails(t translations.TranslationHelperFunc) inventory.Serv
 				return utils.NewToolResultErrorFromErr("failed to marshal response", err), nil, nil
 			}
 
-			return utils.NewToolResultText(string(r)), nil, nil
+			// Convert to typed result
+			var typedResult GetNotificationDetailsResult
+			if err := json.Unmarshal(r, &typedResult); err != nil {
+				return utils.NewToolResultErrorFromErr("failed to unmarshal response", err), nil, nil
+			}
+
+			return utils.NewToolResultText(string(r)), &typedResult, nil
 		},
 	)
 }
@@ -404,6 +530,12 @@ const (
 	NotificationActionWatch  = "watch"
 	NotificationActionDelete = "delete"
 )
+
+type ManageNotificationSubscriptionResult struct {
+	Message    *string `json:"message,omitempty"`
+	Ignored    *bool   `json:"ignored,omitempty"`
+	Subscribed *bool   `json:"subscribed,omitempty"`
+}
 
 // ManageNotificationSubscription creates a tool to manage a notification subscription (ignore, watch, delete)
 func ManageNotificationSubscription(t translations.TranslationHelperFunc) inventory.ServerTool {
@@ -431,9 +563,17 @@ func ManageNotificationSubscription(t translations.TranslationHelperFunc) invent
 				},
 				Required: []string{"notificationID", "action"},
 			},
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"message":    {Type: "string"},
+					"ignored":    {Type: "boolean"},
+					"subscribed": {Type: "boolean"},
+				},
+			},
 		},
 		[]scopes.Scope{scopes.Notifications},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *ManageNotificationSubscriptionResult, error) {
 			client, err := deps.GetClient(ctx)
 			if err != nil {
 				return utils.NewToolResultErrorFromErr("failed to get GitHub client", err), nil, nil
@@ -483,14 +623,24 @@ func ManageNotificationSubscription(t translations.TranslationHelperFunc) invent
 
 			if action == NotificationActionDelete {
 				// Special case for delete as there is no response body
-				return utils.NewToolResultText("Notification subscription deleted"), nil, nil
+				message := "Notification subscription deleted"
+				typedResult := &ManageNotificationSubscriptionResult{Message: &message}
+				return utils.NewToolResultText(message), typedResult, nil
 			}
 
 			r, err := json.Marshal(result)
 			if err != nil {
 				return utils.NewToolResultErrorFromErr("failed to marshal response", err), nil, nil
 			}
-			return utils.NewToolResultText(string(r)), nil, nil
+
+			// Convert subscription result to typed result
+			var typedResult ManageNotificationSubscriptionResult
+			if sub, ok := result.(*github.Subscription); ok {
+				typedResult.Ignored = sub.Ignored
+				typedResult.Subscribed = sub.Subscribed
+			}
+
+			return utils.NewToolResultText(string(r)), &typedResult, nil
 		},
 	)
 }
@@ -500,6 +650,12 @@ const (
 	RepositorySubscriptionActionIgnore = "ignore"
 	RepositorySubscriptionActionDelete = "delete"
 )
+
+type ManageRepositoryNotificationSubscriptionResult struct {
+	Message    *string `json:"message,omitempty"`
+	Ignored    *bool   `json:"ignored,omitempty"`
+	Subscribed *bool   `json:"subscribed,omitempty"`
+}
 
 // ManageRepositoryNotificationSubscription creates a tool to manage a repository notification subscription (ignore, watch, delete)
 func ManageRepositoryNotificationSubscription(t translations.TranslationHelperFunc) inventory.ServerTool {
@@ -531,9 +687,17 @@ func ManageRepositoryNotificationSubscription(t translations.TranslationHelperFu
 				},
 				Required: []string{"owner", "repo", "action"},
 			},
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"message":    {Type: "string"},
+					"ignored":    {Type: "boolean"},
+					"subscribed": {Type: "boolean"},
+				},
+			},
 		},
 		[]scopes.Scope{scopes.Notifications},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *ManageRepositoryNotificationSubscriptionResult, error) {
 			client, err := deps.GetClient(ctx)
 			if err != nil {
 				return utils.NewToolResultErrorFromErr("failed to get GitHub client", err), nil, nil
@@ -590,14 +754,24 @@ func ManageRepositoryNotificationSubscription(t translations.TranslationHelperFu
 
 			if action == RepositorySubscriptionActionDelete {
 				// Special case for delete as there is no response body
-				return utils.NewToolResultText("Repository subscription deleted"), nil, nil
+				message := "Repository subscription deleted"
+				typedResult := &ManageRepositoryNotificationSubscriptionResult{Message: &message}
+				return utils.NewToolResultText(message), typedResult, nil
 			}
 
 			r, err := json.Marshal(result)
 			if err != nil {
 				return utils.NewToolResultErrorFromErr("failed to marshal response", err), nil, nil
 			}
-			return utils.NewToolResultText(string(r)), nil, nil
+
+			// Convert subscription result to typed result
+			var typedResult ManageRepositoryNotificationSubscriptionResult
+			if sub, ok := result.(*github.Subscription); ok {
+				typedResult.Ignored = sub.Ignored
+				typedResult.Subscribed = sub.Subscribed
+			}
+
+			return utils.NewToolResultText(string(r)), &typedResult, nil
 		},
 	)
 }

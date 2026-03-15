@@ -17,6 +17,10 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
+type ListSecretScanningAlertsResult struct {
+	Alerts []*github.SecretScanningAlert `json:"alerts"`
+}
+
 func GetSecretScanningAlert(t translations.TranslationHelperFunc) inventory.ServerTool {
 	return NewTool(
 		ToolsetMetadataSecretProtection,
@@ -45,9 +49,19 @@ func GetSecretScanningAlert(t translations.TranslationHelperFunc) inventory.Serv
 				},
 				Required: []string{"owner", "repo", "alertNumber"},
 			},
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"number":      {Type: "integer"},
+					"state":       {Type: "string"},
+					"html_url":    {Type: "string"},
+					"secret_type": {Type: "string"},
+					"resolution":  {Type: "string"},
+				},
+			},
 		},
 		[]scopes.Scope{scopes.SecurityEvents},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *github.SecretScanningAlert, error) {
 			owner, err := RequiredParam[string](args, "owner")
 			if err != nil {
 				return utils.NewToolResultError(err.Error()), nil, nil
@@ -89,7 +103,7 @@ func GetSecretScanningAlert(t translations.TranslationHelperFunc) inventory.Serv
 				return nil, nil, fmt.Errorf("failed to marshal alert: %w", err)
 			}
 
-			return utils.NewToolResultText(string(r)), nil, nil
+			return utils.NewToolResultText(string(r)), alert, nil
 		},
 	)
 }
@@ -132,9 +146,27 @@ func ListSecretScanningAlerts(t translations.TranslationHelperFunc) inventory.Se
 				},
 				Required: []string{"owner", "repo"},
 			},
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"alerts": {
+						Type: "array",
+						Items: &jsonschema.Schema{
+							Type: "object",
+							Properties: map[string]*jsonschema.Schema{
+								"number":      {Type: "integer"},
+								"state":       {Type: "string"},
+								"html_url":    {Type: "string"},
+								"secret_type": {Type: "string"},
+								"resolution":  {Type: "string"},
+							},
+						},
+					},
+				},
+			},
 		},
 		[]scopes.Scope{scopes.SecurityEvents},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *ListSecretScanningAlertsResult, error) {
 			owner, err := RequiredParam[string](args, "owner")
 			if err != nil {
 				return utils.NewToolResultError(err.Error()), nil, nil
@@ -183,7 +215,7 @@ func ListSecretScanningAlerts(t translations.TranslationHelperFunc) inventory.Se
 				return nil, nil, fmt.Errorf("failed to marshal alerts: %w", err)
 			}
 
-			return utils.NewToolResultText(string(r)), nil, nil
+			return utils.NewToolResultText(string(r)), &ListSecretScanningAlertsResult{Alerts: alerts}, nil
 		},
 	)
 }

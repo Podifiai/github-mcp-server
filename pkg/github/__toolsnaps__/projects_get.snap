@@ -54,5 +54,25 @@
     ],
     "type": "object"
   },
-  "name": "projects_get"
+  "name": "projects_get",
+  "outputSchema": {
+    "properties": {
+      "id": {
+        "type": "string"
+      },
+      "name": {
+        "type": "string"
+      },
+      "number": {
+        "type": "integer"
+      },
+      "title": {
+        "type": "string"
+      },
+      "url": {
+        "type": "string"
+      }
+    },
+    "type": "object"
+  }
 }

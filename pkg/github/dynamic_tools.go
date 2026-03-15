@@ -29,9 +29,9 @@ type DynamicToolDependencies struct {
 // NewDynamicTool creates a ServerTool with fully-typed DynamicToolDependencies.
 // Dynamic tools use a different dependency structure (DynamicToolDependencies) than regular
 // tools (ToolDependencies), so they intentionally use the closure pattern.
-func NewDynamicTool(toolset inventory.ToolsetMetadata, tool mcp.Tool, handler func(deps DynamicToolDependencies) mcp.ToolHandlerFor[map[string]any, any]) inventory.ServerTool {
+func NewDynamicTool[Out any](toolset inventory.ToolsetMetadata, tool mcp.Tool, handler func(deps DynamicToolDependencies) mcp.ToolHandlerFor[map[string]any, Out]) inventory.ServerTool {
 	//nolint:staticcheck // SA1019: Dynamic tools use a different deps structure, closure pattern is intentional
-	return inventory.NewServerTool(tool, toolset, func(d any) mcp.ToolHandlerFor[map[string]any, any] {
+	return inventory.NewServerTool(tool, toolset, func(d any) mcp.ToolHandlerFor[map[string]any, Out] {
 		return handler(d.(DynamicToolDependencies))
 	})
 }
@@ -57,6 +57,13 @@ func DynamicTools(r *inventory.Inventory) []inventory.ServerTool {
 	}
 }
 
+// EnableToolsetResult represents the result of enabling a toolset
+type EnableToolsetResult struct {
+	Toolset   string `json:"toolset"`
+	ToolCount int    `json:"tool_count"`
+	Message   string `json:"message"`
+}
+
 // EnableToolset creates a tool that enables a toolset at runtime.
 func EnableToolset(r *inventory.Inventory) inventory.ServerTool {
 	return NewDynamicTool(
@@ -79,6 +86,14 @@ func EnableToolset(r *inventory.Inventory) inventory.ServerTool {
 				},
 				Required: []string{"toolset"},
 			},
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"toolset":    {Type: "string"},
+					"tool_count": {Type: "integer"},
+					"message":    {Type: "string"},
+				},
+			},
 		},
 		func(deps DynamicToolDependencies) mcp.ToolHandlerFor[map[string]any, any] {
 			return func(_ context.Context, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
@@ -94,7 +109,12 @@ func EnableToolset(r *inventory.Inventory) inventory.ServerTool {
 				}
 
 				if deps.Inventory.IsToolsetEnabled(toolsetID) {
-					return utils.NewToolResultText(fmt.Sprintf("Toolset %s is already enabled", toolsetName)), nil, nil
+					result := &EnableToolsetResult{
+						Toolset:   toolsetName,
+						ToolCount: 0,
+						Message:   fmt.Sprintf("Toolset %s is already enabled", toolsetName),
+					}
+					return utils.NewToolResultText(result.Message), result, nil
 				}
 
 				// Mark the toolset as enabled so IsToolsetEnabled returns true
@@ -106,10 +126,25 @@ func EnableToolset(r *inventory.Inventory) inventory.ServerTool {
 					st.RegisterFunc(deps.Server, deps.ToolDeps, deps.Inventory.StructuredContent())
 				}
 
-				return utils.NewToolResultText(fmt.Sprintf("Toolset %s enabled with %d tools", toolsetName, len(toolsForToolset))), nil, nil
+				result := &EnableToolsetResult{
+					Toolset:   toolsetName,
+					ToolCount: len(toolsForToolset),
+					Message:   fmt.Sprintf("Toolset %s enabled with %d tools", toolsetName, len(toolsForToolset)),
+				}
+				return utils.NewToolResultText(result.Message), result, nil
 			}
 		},
 	)
+}
+
+// ListAvailableToolsetsResult wraps the toolset list result
+type ListAvailableToolsetsResult struct {
+	Toolsets []struct {
+		Name             string `json:"name"`
+		Description      string `json:"description"`
+		CanEnable        string `json:"can_enable"`
+		CurrentlyEnabled string `json:"currently_enabled"`
+	} `json:"toolsets"`
 }
 
 // ListAvailableToolsets creates a tool that lists all available inventory.
@@ -126,6 +161,23 @@ func ListAvailableToolsets() inventory.ServerTool {
 			InputSchema: &jsonschema.Schema{
 				Type:       "object",
 				Properties: map[string]*jsonschema.Schema{},
+			},
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"toolsets": {
+						Type: "array",
+						Items: &jsonschema.Schema{
+							Type: "object",
+							Properties: map[string]*jsonschema.Schema{
+								"name":              {Type: "string"},
+								"description":       {Type: "string"},
+								"can_enable":        {Type: "string"},
+								"currently_enabled": {Type: "string"},
+							},
+						},
+					},
+				},
 			},
 		},
 		func(deps DynamicToolDependencies) mcp.ToolHandlerFor[map[string]any, any] {
@@ -144,15 +196,42 @@ func ListAvailableToolsets() inventory.ServerTool {
 					payload = append(payload, t)
 				}
 
+				// Marshal the original array format for text content
 				r, err := json.Marshal(payload)
 				if err != nil {
 					return nil, nil, fmt.Errorf("failed to marshal features: %w", err)
 				}
 
-				return utils.NewToolResultText(string(r)), nil, nil
+				// Build the wrapper struct for the Out value
+				result := &ListAvailableToolsetsResult{}
+				result.Toolsets = make([]struct {
+					Name             string `json:"name"`
+					Description      string `json:"description"`
+					CanEnable        string `json:"can_enable"`
+					CurrentlyEnabled string `json:"currently_enabled"`
+				}, len(toolsetIDs))
+
+				for i, id := range toolsetIDs {
+					result.Toolsets[i].Name = string(id)
+					result.Toolsets[i].Description = descriptions[id]
+					result.Toolsets[i].CanEnable = "true"
+					result.Toolsets[i].CurrentlyEnabled = fmt.Sprintf("%t", deps.Inventory.IsToolsetEnabled(id))
+				}
+
+				return utils.NewToolResultText(string(r)), result, nil
 			}
 		},
 	)
+}
+
+// GetToolsetToolsResult wraps the toolset tools result
+type GetToolsetToolsResult struct {
+	Tools []struct {
+		Name        string `json:"name"`
+		Description string `json:"description"`
+		CanEnable   string `json:"can_enable"`
+		Toolset     string `json:"toolset"`
+	} `json:"tools"`
 }
 
 // GetToolsetsTools creates a tool that lists all tools in a specific toolset.
@@ -176,6 +255,23 @@ func GetToolsetsTools(r *inventory.Inventory) inventory.ServerTool {
 					},
 				},
 				Required: []string{"toolset"},
+			},
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"tools": {
+						Type: "array",
+						Items: &jsonschema.Schema{
+							Type: "object",
+							Properties: map[string]*jsonschema.Schema{
+								"name":        {Type: "string"},
+								"description": {Type: "string"},
+								"can_enable":  {Type: "string"},
+								"toolset":     {Type: "string"},
+							},
+						},
+					},
+				},
 			},
 		},
 		func(deps DynamicToolDependencies) mcp.ToolHandlerFor[map[string]any, any] {
@@ -205,12 +301,29 @@ func GetToolsetsTools(r *inventory.Inventory) inventory.ServerTool {
 					payload = append(payload, tool)
 				}
 
+				// Marshal the original array format for text content
 				r, err := json.Marshal(payload)
 				if err != nil {
 					return nil, nil, fmt.Errorf("failed to marshal features: %w", err)
 				}
 
-				return utils.NewToolResultText(string(r)), nil, nil
+				// Build the wrapper struct for the Out value
+				result := &GetToolsetToolsResult{}
+				result.Tools = make([]struct {
+					Name        string `json:"name"`
+					Description string `json:"description"`
+					CanEnable   string `json:"can_enable"`
+					Toolset     string `json:"toolset"`
+				}, len(toolsInToolset))
+
+				for i, st := range toolsInToolset {
+					result.Tools[i].Name = st.Tool.Name
+					result.Tools[i].Description = st.Tool.Description
+					result.Tools[i].CanEnable = "true"
+					result.Tools[i].Toolset = toolsetName
+				}
+
+				return utils.NewToolResultText(string(r)), result, nil
 			}
 		},
 	)

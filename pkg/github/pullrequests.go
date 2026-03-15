@@ -68,9 +68,117 @@ Possible options:
 				ReadOnlyHint: true,
 			},
 			InputSchema: schema,
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"pull_request": {
+						Type: "object",
+						Properties: map[string]*jsonschema.Schema{
+							"id":         {Type: "integer"},
+							"number":     {Type: "integer"},
+							"title":      {Type: "string"},
+							"state":      {Type: "string"},
+							"body":       {Type: "string"},
+							"html_url":   {Type: "string"},
+							"created_at": {Type: "string"},
+							"updated_at": {Type: "string"},
+							"user": {
+								Type: "object",
+								Properties: map[string]*jsonschema.Schema{
+									"login":      {Type: "string"},
+									"id":         {Type: "integer"},
+									"avatar_url": {Type: "string"},
+									"html_url":   {Type: "string"},
+								},
+							},
+						},
+					},
+					"diff": {Type: "string"},
+					"files": {
+						Type: "array",
+						Items: &jsonschema.Schema{
+							Type: "object",
+							Properties: map[string]*jsonschema.Schema{
+								"filename":  {Type: "string"},
+								"status":    {Type: "string"},
+								"additions": {Type: "integer"},
+								"deletions": {Type: "integer"},
+								"changes":   {Type: "integer"},
+								"patch":     {Type: "string"},
+							},
+						},
+					},
+					"reviews": {
+						Type: "array",
+						Items: &jsonschema.Schema{
+							Type: "object",
+							Properties: map[string]*jsonschema.Schema{
+								"id":           {Type: "integer"},
+								"state":        {Type: "string"},
+								"body":         {Type: "string"},
+								"html_url":     {Type: "string"},
+								"submitted_at": {Type: "string"},
+								"commit_id":    {Type: "string"},
+								"user": {
+									Type: "object",
+									Properties: map[string]*jsonschema.Schema{
+										"login":      {Type: "string"},
+										"id":         {Type: "integer"},
+										"avatar_url": {Type: "string"},
+										"html_url":   {Type: "string"},
+									},
+								},
+							},
+						},
+					},
+					"comments": {
+						Type: "array",
+						Items: &jsonschema.Schema{
+							Type: "object",
+							Properties: map[string]*jsonschema.Schema{
+								"id":         {Type: "integer"},
+								"body":       {Type: "string"},
+								"html_url":   {Type: "string"},
+								"created_at": {Type: "string"},
+								"updated_at": {Type: "string"},
+								"user": {
+									Type: "object",
+									Properties: map[string]*jsonschema.Schema{
+										"login":      {Type: "string"},
+										"id":         {Type: "integer"},
+										"avatar_url": {Type: "string"},
+										"html_url":   {Type: "string"},
+									},
+								},
+							},
+						},
+					},
+					"status": {
+						Type: "object",
+						Properties: map[string]*jsonschema.Schema{
+							"state":       {Type: "string"},
+							"total_count": {Type: "integer"},
+							"sha":         {Type: "string"},
+							"statuses": {
+								Type: "array",
+								Items: &jsonschema.Schema{
+									Type: "object",
+									Properties: map[string]*jsonschema.Schema{
+										"state":       {Type: "string"},
+										"description": {Type: "string"},
+										"context":     {Type: "string"},
+										"target_url":  {Type: "string"},
+									},
+								},
+							},
+						},
+					},
+					"review_comments": {Type: "object"},
+				},
+			},
 		},
 		[]scopes.Scope{scopes.Repo},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *PullRequestReadResult, error) {
 			method, err := RequiredParam[string](args, "method")
 			if err != nil {
 				return utils.NewToolResultError(err.Error()), nil, nil
@@ -98,16 +206,36 @@ Possible options:
 				return utils.NewToolResultErrorFromErr("failed to get GitHub client", err), nil, nil
 			}
 
+			result := &PullRequestReadResult{}
 			switch method {
 			case "get":
-				return GetPullRequest(ctx, client, deps, owner, repo, pullNumber)
+				toolResult, pr, err := GetPullRequest(ctx, client, deps, owner, repo, pullNumber)
+				if err != nil {
+					return toolResult, nil, err
+				}
+				result.PullRequest = pr
+				return toolResult, result, nil
 			case "get_diff":
-				result, err := GetPullRequestDiff(ctx, client, owner, repo, pullNumber)
-				return result, nil, err
+				toolResult, diff, err := GetPullRequestDiff(ctx, client, owner, repo, pullNumber)
+				if err != nil {
+					return toolResult, nil, err
+				}
+				result.Diff = diff
+				return toolResult, result, nil
 			case "get_status":
-				return GetPullRequestStatus(ctx, client, owner, repo, pullNumber)
+				toolResult, status, err := GetPullRequestStatus(ctx, client, owner, repo, pullNumber)
+				if err != nil {
+					return toolResult, nil, err
+				}
+				result.Status = status
+				return toolResult, result, nil
 			case "get_files":
-				return GetPullRequestFiles(ctx, client, owner, repo, pullNumber, pagination)
+				toolResult, files, err := GetPullRequestFiles(ctx, client, owner, repo, pullNumber, pagination)
+				if err != nil {
+					return toolResult, nil, err
+				}
+				result.Files = files
+				return toolResult, result, nil
 			case "get_review_comments":
 				gqlClient, err := deps.GetGQLClient(ctx)
 				if err != nil {
@@ -117,12 +245,26 @@ Possible options:
 				if err != nil {
 					return utils.NewToolResultError(err.Error()), nil, nil
 				}
-				return GetPullRequestReviewComments(ctx, gqlClient, deps, owner, repo, pullNumber, cursorPagination)
+				toolResult, reviewComments, err := GetPullRequestReviewComments(ctx, gqlClient, deps, owner, repo, pullNumber, cursorPagination)
+				if err != nil {
+					return toolResult, nil, err
+				}
+				result.ReviewComments = reviewComments
+				return toolResult, result, nil
 			case "get_reviews":
-				return GetPullRequestReviews(ctx, client, deps, owner, repo, pullNumber)
+				toolResult, reviews, err := GetPullRequestReviews(ctx, client, deps, owner, repo, pullNumber)
+				if err != nil {
+					return toolResult, nil, err
+				}
+				result.Reviews = reviews
+				return toolResult, result, nil
 			case "get_comments":
-				result, err := GetIssueComments(ctx, client, deps, owner, repo, pullNumber, pagination)
-				return result, nil, err
+				toolResult, comments, err := GetIssueComments(ctx, client, deps, owner, repo, pullNumber, pagination)
+				if err != nil {
+					return toolResult, nil, err
+				}
+				result.Comments = comments
+				return toolResult, result, nil
 			default:
 				return utils.NewToolResultError(fmt.Sprintf("unknown method: %s", method)), nil, nil
 			}
@@ -189,7 +331,7 @@ func GetPullRequest(ctx context.Context, client *github.Client, deps ToolDepende
 	return utils.NewToolResultText(string(r)), pr, nil
 }
 
-func GetPullRequestDiff(ctx context.Context, client *github.Client, owner, repo string, pullNumber int) (*mcp.CallToolResult, error) {
+func GetPullRequestDiff(ctx context.Context, client *github.Client, owner, repo string, pullNumber int) (*mcp.CallToolResult, string, error) {
 	raw, resp, err := client.PullRequests.GetRaw(
 		ctx,
 		owner,
@@ -202,21 +344,21 @@ func GetPullRequestDiff(ctx context.Context, client *github.Client, owner, repo 
 			"failed to get pull request diff",
 			resp,
 			err,
-		), nil
+		), "", nil
 	}
 
 	if resp.StatusCode != http.StatusOK {
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {
-			return nil, fmt.Errorf("failed to read response body: %w", err)
+			return nil, "", fmt.Errorf("failed to read response body: %w", err)
 		}
-		return ghErrors.NewGitHubAPIStatusErrorResponse(ctx, "failed to get pull request diff", resp, body), nil
+		return ghErrors.NewGitHubAPIStatusErrorResponse(ctx, "failed to get pull request diff", resp, body), "", nil
 	}
 
 	defer func() { _ = resp.Body.Close() }()
 
 	// Return the raw response
-	return utils.NewToolResultText(string(raw)), nil
+	return utils.NewToolResultText(string(raw)), string(raw), nil
 }
 
 func GetPullRequestStatus(ctx context.Context, client *github.Client, owner, repo string, pullNumber int) (*mcp.CallToolResult, *github.CombinedStatus, error) {
@@ -500,6 +642,13 @@ func CreatePullRequest(t translations.TranslationHelperFunc) inventory.ServerToo
 					"visibility":  []string{"model", "app"},
 				},
 			},
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"id":  {Type: "string"},
+					"url": {Type: "string"},
+				},
+			},
 			InputSchema: &jsonschema.Schema{
 				Type: "object",
 				Properties: map[string]*jsonschema.Schema{
@@ -708,6 +857,13 @@ func UpdatePullRequest(t translations.TranslationHelperFunc) inventory.ServerToo
 			Annotations: &mcp.ToolAnnotations{
 				Title:        t("TOOL_UPDATE_PULL_REQUEST_USER_TITLE", "Edit pull request"),
 				ReadOnlyHint: false,
+			},
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"id":  {Type: "string"},
+					"url": {Type: "string"},
+				},
 			},
 			InputSchema: schema,
 		},
@@ -1052,9 +1208,30 @@ func AddReplyToPullRequestComment(t translations.TranslationHelperFunc) inventor
 		})
 }
 
+// PullRequestReadResult wraps the possible returns from pull_request_read for structured content output schema compatibility.
+type PullRequestReadResult struct {
+	PullRequest    *github.PullRequest         `json:"pull_request,omitempty"`
+	Diff           string                      `json:"diff,omitempty"`
+	Files          []*github.CommitFile        `json:"files,omitempty"`
+	Reviews        []*github.PullRequestReview `json:"reviews,omitempty"`
+	Comments       []*github.IssueComment      `json:"comments,omitempty"`
+	Status         *github.CombinedStatus      `json:"status,omitempty"`
+	ReviewComments map[string]any              `json:"review_comments,omitempty"`
+}
+
 // ListPullRequestsResult wraps the slice return for structured content output schema compatibility.
 type ListPullRequestsResult struct {
 	PullRequests []*github.PullRequest `json:"pull_requests"`
+}
+
+// SearchPullRequestsResult wraps the search results for structured content output schema compatibility.
+type SearchPullRequestsResult struct {
+	Issues []*github.Issue `json:"issues"`
+}
+
+// PullRequestReviewWriteResult wraps the possible returns from pull_request_review_write for structured content output schema compatibility.
+type PullRequestReviewWriteResult struct {
+	Message string `json:"message"`
 }
 
 // ListPullRequests creates a tool to list and filter repository pull requests.
@@ -1415,13 +1592,131 @@ func SearchPullRequests(t translations.TranslationHelperFunc) inventory.ServerTo
 				Title:        t("TOOL_SEARCH_PULL_REQUESTS_USER_TITLE", "Search pull requests"),
 				ReadOnlyHint: true,
 			},
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"total_count":        {Type: "integer"},
+					"incomplete_results": {Type: "boolean"},
+					"issues": {
+						Type: "array",
+						Items: &jsonschema.Schema{
+							Type: "object",
+							Properties: map[string]*jsonschema.Schema{
+								"id":         {Type: "integer"},
+								"number":     {Type: "integer"},
+								"title":      {Type: "string"},
+								"state":      {Type: "string"},
+								"body":       {Type: "string"},
+								"html_url":   {Type: "string"},
+								"created_at": {Type: "string"},
+								"updated_at": {Type: "string"},
+								"user": {
+									Type: "object",
+									Properties: map[string]*jsonschema.Schema{
+										"login":      {Type: "string"},
+										"id":         {Type: "integer"},
+										"avatar_url": {Type: "string"},
+										"html_url":   {Type: "string"},
+									},
+								},
+								"pull_request": {
+									Type: "object",
+									Properties: map[string]*jsonschema.Schema{
+										"html_url":  {Type: "string"},
+										"diff_url":  {Type: "string"},
+										"patch_url": {Type: "string"},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
 			InputSchema: schema,
 		},
 		[]scopes.Scope{scopes.Repo},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
-			result, err := searchHandler(ctx, deps.GetClient, args, "pr", "failed to search pull requests")
-			return result, nil, err
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *github.IssuesSearchResult, error) {
+			result, searchResult, err := searchPullRequestsHandler(ctx, deps.GetClient, args, "pr", "failed to search pull requests")
+			return result, searchResult, err
 		})
+}
+
+func searchPullRequestsHandler(
+	ctx context.Context,
+	getClient GetClientFn,
+	args map[string]any,
+	searchType string,
+	errorPrefix string,
+) (*mcp.CallToolResult, *github.IssuesSearchResult, error) {
+	query, err := RequiredParam[string](args, "query")
+	if err != nil {
+		return utils.NewToolResultError(err.Error()), nil, nil
+	}
+
+	if !hasSpecificFilter(query, "is", searchType) {
+		query = fmt.Sprintf("is:%s %s", searchType, query)
+	}
+
+	owner, err := OptionalParam[string](args, "owner")
+	if err != nil {
+		return utils.NewToolResultError(err.Error()), nil, nil
+	}
+
+	repo, err := OptionalParam[string](args, "repo")
+	if err != nil {
+		return utils.NewToolResultError(err.Error()), nil, nil
+	}
+
+	if owner != "" && repo != "" && !hasRepoFilter(query) {
+		query = fmt.Sprintf("repo:%s/%s %s", owner, repo, query)
+	}
+
+	sort, err := OptionalParam[string](args, "sort")
+	if err != nil {
+		return utils.NewToolResultError(err.Error()), nil, nil
+	}
+	order, err := OptionalParam[string](args, "order")
+	if err != nil {
+		return utils.NewToolResultError(err.Error()), nil, nil
+	}
+	pagination, err := OptionalPaginationParams(args)
+	if err != nil {
+		return utils.NewToolResultError(err.Error()), nil, nil
+	}
+
+	opts := &github.SearchOptions{
+		Sort:  sort,
+		Order: order,
+		ListOptions: github.ListOptions{
+			Page:    pagination.Page,
+			PerPage: pagination.PerPage,
+		},
+	}
+
+	client, err := getClient(ctx)
+	if err != nil {
+		return utils.NewToolResultErrorFromErr(errorPrefix+": failed to get GitHub client", err), nil, nil
+	}
+	result, resp, err := client.Search.Issues(ctx, query, opts)
+	if err != nil {
+		return utils.NewToolResultErrorFromErr(errorPrefix, err), nil, nil
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusOK {
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return utils.NewToolResultErrorFromErr(errorPrefix+": failed to read response body", err), nil, nil
+		}
+		return ghErrors.NewGitHubAPIStatusErrorResponse(ctx, errorPrefix, resp, body), nil, nil
+	}
+
+	r, err := json.Marshal(result)
+	if err != nil {
+		return utils.NewToolResultErrorFromErr(errorPrefix+": failed to marshal response", err), nil, nil
+	}
+
+	return utils.NewToolResultText(string(r)), result, nil
 }
 
 // UpdatePullRequestBranch creates a tool to update a pull request branch with the latest changes from the base branch.
@@ -1592,10 +1887,16 @@ Available methods:
 				Title:        t("TOOL_PULL_REQUEST_REVIEW_WRITE_USER_TITLE", "Write operations (create, submit, delete) on pull request reviews."),
 				ReadOnlyHint: false,
 			},
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"message": {Type: "string"},
+				},
+			},
 			InputSchema: schema,
 		},
 		[]scopes.Scope{scopes.Repo},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *PullRequestReviewWriteResult, error) {
 			var params PullRequestReviewWriteParams
 			if err := mapstructure.Decode(args, &params); err != nil {
 				return utils.NewToolResultError(err.Error()), nil, nil
@@ -1609,21 +1910,30 @@ Available methods:
 
 			switch params.Method {
 			case "create":
-				result, err := CreatePullRequestReview(ctx, client, params)
-				return result, nil, err
+				toolResult, message, err := CreatePullRequestReview(ctx, client, params)
+				if err != nil {
+					return toolResult, nil, err
+				}
+				return toolResult, &PullRequestReviewWriteResult{Message: message}, nil
 			case "submit_pending":
-				result, err := SubmitPendingPullRequestReview(ctx, client, params)
-				return result, nil, err
+				toolResult, message, err := SubmitPendingPullRequestReview(ctx, client, params)
+				if err != nil {
+					return toolResult, nil, err
+				}
+				return toolResult, &PullRequestReviewWriteResult{Message: message}, nil
 			case "delete_pending":
-				result, err := DeletePendingPullRequestReview(ctx, client, params)
-				return result, nil, err
+				toolResult, message, err := DeletePendingPullRequestReview(ctx, client, params)
+				if err != nil {
+					return toolResult, nil, err
+				}
+				return toolResult, &PullRequestReviewWriteResult{Message: message}, nil
 			default:
 				return utils.NewToolResultError(fmt.Sprintf("unknown method: %s", params.Method)), nil, nil
 			}
 		})
 }
 
-func CreatePullRequestReview(ctx context.Context, client *githubv4.Client, params PullRequestReviewWriteParams) (*mcp.CallToolResult, error) {
+func CreatePullRequestReview(ctx context.Context, client *githubv4.Client, params PullRequestReviewWriteParams) (*mcp.CallToolResult, string, error) {
 	var getPullRequestQuery struct {
 		Repository struct {
 			PullRequest struct {
@@ -1640,7 +1950,7 @@ func CreatePullRequestReview(ctx context.Context, client *githubv4.Client, param
 		return ghErrors.NewGitHubGraphQLErrorResponse(ctx,
 			"failed to get pull request",
 			err,
-		), nil
+		), "", nil
 	}
 
 	// Now we have the GQL ID, we can create a review
@@ -1669,19 +1979,21 @@ func CreatePullRequestReview(ctx context.Context, client *githubv4.Client, param
 		addPullRequestReviewInput,
 		nil,
 	); err != nil {
-		return utils.NewToolResultError(err.Error()), nil
+		return utils.NewToolResultError(err.Error()), "", nil
 	}
 
 	// Return nothing interesting, just indicate success for the time being.
 	// In future, we may want to return the review ID, but for the moment, we're not leaking
 	// API implementation details to the LLM.
 	if params.Event == "" {
-		return utils.NewToolResultText("pending pull request created"), nil
+		message := "pending pull request created"
+		return utils.NewToolResultText(message), message, nil
 	}
-	return utils.NewToolResultText("pull request review submitted successfully"), nil
+	message := "pull request review submitted successfully"
+	return utils.NewToolResultText(message), message, nil
 }
 
-func SubmitPendingPullRequestReview(ctx context.Context, client *githubv4.Client, params PullRequestReviewWriteParams) (*mcp.CallToolResult, error) {
+func SubmitPendingPullRequestReview(ctx context.Context, client *githubv4.Client, params PullRequestReviewWriteParams) (*mcp.CallToolResult, string, error) {
 	// First we'll get the current user
 	var getViewerQuery struct {
 		Viewer struct {
@@ -1693,7 +2005,7 @@ func SubmitPendingPullRequestReview(ctx context.Context, client *githubv4.Client
 		return ghErrors.NewGitHubGraphQLErrorResponse(ctx,
 			"failed to get current user",
 			err,
-		), nil
+		), "", nil
 	}
 
 	var getLatestReviewForViewerQuery struct {
@@ -1721,18 +2033,18 @@ func SubmitPendingPullRequestReview(ctx context.Context, client *githubv4.Client
 		return ghErrors.NewGitHubGraphQLErrorResponse(ctx,
 			"failed to get latest review for current user",
 			err,
-		), nil
+		), "", nil
 	}
 
 	// Validate there is one review and the state is pending
 	if len(getLatestReviewForViewerQuery.Repository.PullRequest.Reviews.Nodes) == 0 {
-		return utils.NewToolResultError("No pending review found for the viewer"), nil
+		return utils.NewToolResultError("No pending review found for the viewer"), "", nil
 	}
 
 	review := getLatestReviewForViewerQuery.Repository.PullRequest.Reviews.Nodes[0]
 	if review.State != githubv4.PullRequestReviewStatePending {
 		errText := fmt.Sprintf("The latest review, found at %s is not pending", review.URL)
-		return utils.NewToolResultError(errText), nil
+		return utils.NewToolResultError(errText), "", nil
 	}
 
 	// Prepare the mutation
@@ -1757,16 +2069,17 @@ func SubmitPendingPullRequestReview(ctx context.Context, client *githubv4.Client
 		return ghErrors.NewGitHubGraphQLErrorResponse(ctx,
 			"failed to submit pull request review",
 			err,
-		), nil
+		), "", nil
 	}
 
 	// Return nothing interesting, just indicate success for the time being.
 	// In future, we may want to return the review ID, but for the moment, we're not leaking
 	// API implementation details to the LLM.
-	return utils.NewToolResultText("pending pull request review successfully submitted"), nil
+	message := "pending pull request review successfully submitted"
+	return utils.NewToolResultText(message), message, nil
 }
 
-func DeletePendingPullRequestReview(ctx context.Context, client *githubv4.Client, params PullRequestReviewWriteParams) (*mcp.CallToolResult, error) {
+func DeletePendingPullRequestReview(ctx context.Context, client *githubv4.Client, params PullRequestReviewWriteParams) (*mcp.CallToolResult, string, error) {
 	// First we'll get the current user
 	var getViewerQuery struct {
 		Viewer struct {
@@ -1778,7 +2091,7 @@ func DeletePendingPullRequestReview(ctx context.Context, client *githubv4.Client
 		return ghErrors.NewGitHubGraphQLErrorResponse(ctx,
 			"failed to get current user",
 			err,
-		), nil
+		), "", nil
 	}
 
 	var getLatestReviewForViewerQuery struct {
@@ -1806,18 +2119,18 @@ func DeletePendingPullRequestReview(ctx context.Context, client *githubv4.Client
 		return ghErrors.NewGitHubGraphQLErrorResponse(ctx,
 			"failed to get latest review for current user",
 			err,
-		), nil
+		), "", nil
 	}
 
 	// Validate there is one review and the state is pending
 	if len(getLatestReviewForViewerQuery.Repository.PullRequest.Reviews.Nodes) == 0 {
-		return utils.NewToolResultError("No pending review found for the viewer"), nil
+		return utils.NewToolResultError("No pending review found for the viewer"), "", nil
 	}
 
 	review := getLatestReviewForViewerQuery.Repository.PullRequest.Reviews.Nodes[0]
 	if review.State != githubv4.PullRequestReviewStatePending {
 		errText := fmt.Sprintf("The latest review, found at %s is not pending", review.URL)
-		return utils.NewToolResultError(errText), nil
+		return utils.NewToolResultError(errText), "", nil
 	}
 
 	// Prepare the mutation
@@ -1837,13 +2150,14 @@ func DeletePendingPullRequestReview(ctx context.Context, client *githubv4.Client
 		},
 		nil,
 	); err != nil {
-		return utils.NewToolResultError(err.Error()), nil
+		return utils.NewToolResultError(err.Error()), "", nil
 	}
 
 	// Return nothing interesting, just indicate success for the time being.
 	// In future, we may want to return the review ID, but for the moment, we're not leaking
 	// API implementation details to the LLM.
-	return utils.NewToolResultText("pending pull request review successfully deleted"), nil
+	message := "pending pull request review successfully deleted"
+	return utils.NewToolResultText(message), message, nil
 }
 
 // AddCommentToPendingReview creates a tool to add a comment to a pull request review.
@@ -1916,10 +2230,16 @@ func AddCommentToPendingReview(t translations.TranslationHelperFunc) inventory.S
 				Title:        t("TOOL_ADD_COMMENT_TO_PENDING_REVIEW_USER_TITLE", "Add review comment to the requester's latest pending pull request review"),
 				ReadOnlyHint: false,
 			},
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"message": {Type: "string"},
+				},
+			},
 			InputSchema: schema,
 		},
 		[]scopes.Scope{scopes.Repo},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *PullRequestReviewWriteResult, error) {
 			var params struct {
 				Owner       string
 				Repo        string
@@ -2032,7 +2352,8 @@ func AddCommentToPendingReview(t translations.TranslationHelperFunc) inventory.S
 			// Return nothing interesting, just indicate success for the time being.
 			// In future, we may want to return the review ID, but for the moment, we're not leaking
 			// API implementation details to the LLM.
-			return utils.NewToolResultText("pull request review comment successfully added to pending review"), nil, nil
+			message := "pull request review comment successfully added to pending review"
+			return utils.NewToolResultText(message), &PullRequestReviewWriteResult{Message: message}, nil
 		})
 }
 
@@ -2069,10 +2390,16 @@ func RequestCopilotReview(t translations.TranslationHelperFunc) inventory.Server
 				Title:        t("TOOL_REQUEST_COPILOT_REVIEW_USER_TITLE", "Request Copilot review"),
 				ReadOnlyHint: false,
 			},
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"message": {Type: "string"},
+				},
+			},
 			InputSchema: schema,
 		},
 		[]scopes.Scope{scopes.Repo},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *PullRequestReviewWriteResult, error) {
 			owner, err := RequiredParam[string](args, "owner")
 			if err != nil {
 				return utils.NewToolResultError(err.Error()), nil, nil
@@ -2121,7 +2448,7 @@ func RequestCopilotReview(t translations.TranslationHelperFunc) inventory.Server
 			}
 
 			// Return nothing on success, as there's not much value in returning the Pull Request itself
-			return utils.NewToolResultText(""), nil, nil
+			return utils.NewToolResultText(""), &PullRequestReviewWriteResult{Message: "Copilot review requested successfully"}, nil
 		})
 }
 

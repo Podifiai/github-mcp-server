@@ -16,6 +16,10 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
+type ListCodeScanningAlertsResult struct {
+	Alerts []*github.Alert `json:"alerts"`
+}
+
 func GetCodeScanningAlert(t translations.TranslationHelperFunc) inventory.ServerTool {
 	return NewTool(
 		ToolsetMetadataCodeSecurity,
@@ -44,9 +48,25 @@ func GetCodeScanningAlert(t translations.TranslationHelperFunc) inventory.Server
 				},
 				Required: []string{"owner", "repo", "alertNumber"},
 			},
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"number":   {Type: "integer"},
+					"state":    {Type: "string"},
+					"html_url": {Type: "string"},
+					"rule": {
+						Type: "object",
+						Properties: map[string]*jsonschema.Schema{
+							"id":          {Type: "string"},
+							"severity":    {Type: "string"},
+							"description": {Type: "string"},
+						},
+					},
+				},
+			},
 		},
 		[]scopes.Scope{scopes.SecurityEvents},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *github.Alert, error) {
 			owner, err := RequiredParam[string](args, "owner")
 			if err != nil {
 				return utils.NewToolResultError(err.Error()), nil, nil
@@ -88,7 +108,7 @@ func GetCodeScanningAlert(t translations.TranslationHelperFunc) inventory.Server
 				return utils.NewToolResultErrorFromErr("failed to marshal alert", err), nil, nil
 			}
 
-			return utils.NewToolResultText(string(r)), nil, nil
+			return utils.NewToolResultText(string(r)), alert, nil
 		},
 	)
 }
@@ -136,9 +156,33 @@ func ListCodeScanningAlerts(t translations.TranslationHelperFunc) inventory.Serv
 				},
 				Required: []string{"owner", "repo"},
 			},
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"alerts": {
+						Type: "array",
+						Items: &jsonschema.Schema{
+							Type: "object",
+							Properties: map[string]*jsonschema.Schema{
+								"number":   {Type: "integer"},
+								"state":    {Type: "string"},
+								"html_url": {Type: "string"},
+								"rule": {
+									Type: "object",
+									Properties: map[string]*jsonschema.Schema{
+										"id":          {Type: "string"},
+										"severity":    {Type: "string"},
+										"description": {Type: "string"},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
 		},
 		[]scopes.Scope{scopes.SecurityEvents},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *ListCodeScanningAlertsResult, error) {
 			owner, err := RequiredParam[string](args, "owner")
 			if err != nil {
 				return utils.NewToolResultError(err.Error()), nil, nil
@@ -191,7 +235,7 @@ func ListCodeScanningAlerts(t translations.TranslationHelperFunc) inventory.Serv
 				return utils.NewToolResultErrorFromErr("failed to marshal alerts", err), nil, nil
 			}
 
-			return utils.NewToolResultText(string(r)), nil, nil
+			return utils.NewToolResultText(string(r)), &ListCodeScanningAlertsResult{Alerts: alerts}, nil
 		},
 	)
 }

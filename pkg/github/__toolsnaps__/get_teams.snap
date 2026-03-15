@@ -13,5 +13,38 @@
     },
     "type": "object"
   },
-  "name": "get_teams"
+  "name": "get_teams",
+  "outputSchema": {
+    "properties": {
+      "organizations": {
+        "items": {
+          "properties": {
+            "org": {
+              "type": "string"
+            },
+            "teams": {
+              "items": {
+                "properties": {
+                  "description": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "slug": {
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              },
+              "type": "array"
+            }
+          },
+          "type": "object"
+        },
+        "type": "array"
+      }
+    },
+    "type": "object"
+  }
 }

@@ -17,6 +17,31 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
+// GistFile represents a file in a gist
+type GistFile struct {
+	Filename string `json:"filename"`
+	Type     string `json:"type,omitempty"`
+	Language string `json:"language,omitempty"`
+	Size     int    `json:"size,omitempty"`
+}
+
+// GistResult represents a single gist
+type GistResult struct {
+	ID          string              `json:"id"`
+	Description string              `json:"description,omitempty"`
+	Public      bool                `json:"public"`
+	HTMLURL     string              `json:"html_url"`
+	Files       map[string]GistFile `json:"files"`
+	CreatedAt   string              `json:"created_at,omitempty"`
+	UpdatedAt   string              `json:"updated_at,omitempty"`
+	Owner       *MinimalUser        `json:"owner,omitempty"`
+}
+
+// ListGistsResult wraps the slice return for structured content output schema compatibility
+type ListGistsResult struct {
+	Gists []GistResult `json:"gists"`
+}
+
 // ListGists creates a tool to list gists for a user
 func ListGists(t translations.TranslationHelperFunc) inventory.ServerTool {
 	return NewTool(
@@ -41,9 +66,49 @@ func ListGists(t translations.TranslationHelperFunc) inventory.ServerTool {
 					},
 				},
 			}),
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"gists": {
+						Type: "array",
+						Items: &jsonschema.Schema{
+							Type: "object",
+							Properties: map[string]*jsonschema.Schema{
+								"id":          {Type: "string"},
+								"description": {Type: "string"},
+								"public":      {Type: "boolean"},
+								"html_url":    {Type: "string"},
+								"files": {
+									Type: "object",
+									AdditionalProperties: &jsonschema.Schema{
+										Type: "object",
+										Properties: map[string]*jsonschema.Schema{
+											"filename": {Type: "string"},
+											"type":     {Type: "string"},
+											"language": {Type: "string"},
+											"size":     {Type: "integer"},
+										},
+									},
+								},
+								"created_at": {Type: "string"},
+								"updated_at": {Type: "string"},
+								"owner": {
+									Type: "object",
+									Properties: map[string]*jsonschema.Schema{
+										"login":       {Type: "string"},
+										"id":          {Type: "integer"},
+										"profile_url": {Type: "string"},
+										"avatar_url":  {Type: "string"},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
 		},
 		nil,
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *ListGistsResult, error) {
 			username, err := OptionalParam[string](args, "username")
 			if err != nil {
 				return utils.NewToolResultError(err.Error()), nil, nil
@@ -94,12 +159,50 @@ func ListGists(t translations.TranslationHelperFunc) inventory.ServerTool {
 				return ghErrors.NewGitHubAPIStatusErrorResponse(ctx, "failed to list gists", resp, body), nil, nil
 			}
 
+			// Marshal original gists for text content
 			r, err := json.Marshal(gists)
 			if err != nil {
 				return utils.NewToolResultErrorFromErr("failed to marshal response", err), nil, nil
 			}
 
-			return utils.NewToolResultText(string(r)), nil, nil
+			// Build typed result for Out value
+			gistResults := make([]GistResult, 0, len(gists))
+			for _, g := range gists {
+				files := make(map[string]GistFile)
+				for name, file := range g.Files {
+					files[string(name)] = GistFile{
+						Filename: file.GetFilename(),
+						Type:     file.GetType(),
+						Language: file.GetLanguage(),
+						Size:     file.GetSize(),
+					}
+				}
+
+				var owner *MinimalUser
+				if g.Owner != nil {
+					owner = convertToMinimalUser(g.Owner)
+				}
+
+				gistResult := GistResult{
+					ID:          g.GetID(),
+					Description: g.GetDescription(),
+					Public:      g.GetPublic(),
+					HTMLURL:     g.GetHTMLURL(),
+					Files:       files,
+					Owner:       owner,
+				}
+				if g.CreatedAt != nil {
+					gistResult.CreatedAt = g.CreatedAt.Format("2006-01-02T15:04:05Z")
+				}
+				if g.UpdatedAt != nil {
+					gistResult.UpdatedAt = g.UpdatedAt.Format("2006-01-02T15:04:05Z")
+				}
+
+				gistResults = append(gistResults, gistResult)
+			}
+
+			result := &ListGistsResult{Gists: gistResults}
+			return utils.NewToolResultText(string(r)), result, nil
 		},
 	)
 }
@@ -125,9 +228,41 @@ func GetGist(t translations.TranslationHelperFunc) inventory.ServerTool {
 				},
 				Required: []string{"gist_id"},
 			},
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"id":          {Type: "string"},
+					"description": {Type: "string"},
+					"public":      {Type: "boolean"},
+					"html_url":    {Type: "string"},
+					"files": {
+						Type: "object",
+						AdditionalProperties: &jsonschema.Schema{
+							Type: "object",
+							Properties: map[string]*jsonschema.Schema{
+								"filename": {Type: "string"},
+								"type":     {Type: "string"},
+								"language": {Type: "string"},
+								"size":     {Type: "integer"},
+							},
+						},
+					},
+					"created_at": {Type: "string"},
+					"updated_at": {Type: "string"},
+					"owner": {
+						Type: "object",
+						Properties: map[string]*jsonschema.Schema{
+							"login":       {Type: "string"},
+							"id":          {Type: "integer"},
+							"profile_url": {Type: "string"},
+							"avatar_url":  {Type: "string"},
+						},
+					},
+				},
+			},
 		},
 		nil,
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *GistResult, error) {
 			gistID, err := RequiredParam[string](args, "gist_id")
 			if err != nil {
 				return utils.NewToolResultError(err.Error()), nil, nil
@@ -152,12 +287,42 @@ func GetGist(t translations.TranslationHelperFunc) inventory.ServerTool {
 				return ghErrors.NewGitHubAPIStatusErrorResponse(ctx, "failed to get gist", resp, body), nil, nil
 			}
 
-			r, err := json.Marshal(gist)
+			files := make(map[string]GistFile)
+			for name, file := range gist.Files {
+				files[string(name)] = GistFile{
+					Filename: file.GetFilename(),
+					Type:     file.GetType(),
+					Language: file.GetLanguage(),
+					Size:     file.GetSize(),
+				}
+			}
+
+			var owner *MinimalUser
+			if gist.Owner != nil {
+				owner = convertToMinimalUser(gist.Owner)
+			}
+
+			result := &GistResult{
+				ID:          gist.GetID(),
+				Description: gist.GetDescription(),
+				Public:      gist.GetPublic(),
+				HTMLURL:     gist.GetHTMLURL(),
+				Files:       files,
+				Owner:       owner,
+			}
+			if gist.CreatedAt != nil {
+				result.CreatedAt = gist.CreatedAt.Format("2006-01-02T15:04:05Z")
+			}
+			if gist.UpdatedAt != nil {
+				result.UpdatedAt = gist.UpdatedAt.Format("2006-01-02T15:04:05Z")
+			}
+
+			r, err := json.Marshal(result)
 			if err != nil {
 				return utils.NewToolResultErrorFromErr("failed to marshal response", err), nil, nil
 			}
 
-			return utils.NewToolResultText(string(r)), nil, nil
+			return utils.NewToolResultText(string(r)), result, nil
 		},
 	)
 }
@@ -196,9 +361,16 @@ func CreateGist(t translations.TranslationHelperFunc) inventory.ServerTool {
 				},
 				Required: []string{"filename", "content"},
 			},
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"id":  {Type: "string"},
+					"url": {Type: "string"},
+				},
+			},
 		},
 		[]scopes.Scope{scopes.Gist},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *MinimalResponse, error) {
 			description, err := OptionalParam[string](args, "description")
 			if err != nil {
 				return utils.NewToolResultError(err.Error()), nil, nil
@@ -250,17 +422,17 @@ func CreateGist(t translations.TranslationHelperFunc) inventory.ServerTool {
 				return ghErrors.NewGitHubAPIStatusErrorResponse(ctx, "failed to create gist", resp, body), nil, nil
 			}
 
-			minimalResponse := MinimalResponse{
+			result := &MinimalResponse{
 				ID:  createdGist.GetID(),
 				URL: createdGist.GetHTMLURL(),
 			}
 
-			r, err := json.Marshal(minimalResponse)
+			r, err := json.Marshal(result)
 			if err != nil {
 				return utils.NewToolResultErrorFromErr("failed to marshal response", err), nil, nil
 			}
 
-			return utils.NewToolResultText(string(r)), nil, nil
+			return utils.NewToolResultText(string(r)), result, nil
 		},
 	)
 }
@@ -298,9 +470,16 @@ func UpdateGist(t translations.TranslationHelperFunc) inventory.ServerTool {
 				},
 				Required: []string{"gist_id", "filename", "content"},
 			},
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"id":  {Type: "string"},
+					"url": {Type: "string"},
+				},
+			},
 		},
 		[]scopes.Scope{scopes.Gist},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *MinimalResponse, error) {
 			gistID, err := RequiredParam[string](args, "gist_id")
 			if err != nil {
 				return utils.NewToolResultError(err.Error()), nil, nil
@@ -351,17 +530,17 @@ func UpdateGist(t translations.TranslationHelperFunc) inventory.ServerTool {
 				return ghErrors.NewGitHubAPIStatusErrorResponse(ctx, "failed to update gist", resp, body), nil, nil
 			}
 
-			minimalResponse := MinimalResponse{
+			result := &MinimalResponse{
 				ID:  updatedGist.GetID(),
 				URL: updatedGist.GetHTMLURL(),
 			}
 
-			r, err := json.Marshal(minimalResponse)
+			r, err := json.Marshal(result)
 			if err != nil {
 				return utils.NewToolResultErrorFromErr("failed to marshal response", err), nil, nil
 			}
 
-			return utils.NewToolResultText(string(r)), nil, nil
+			return utils.NewToolResultText(string(r)), result, nil
 		},
 	)
 }

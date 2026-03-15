@@ -36,5 +36,41 @@
     ],
     "type": "object"
   },
-  "name": "get_discussion_comments"
+  "name": "get_discussion_comments",
+  "outputSchema": {
+    "properties": {
+      "comments": {
+        "items": {
+          "properties": {
+            "body": {
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "pageInfo": {
+        "properties": {
+          "endCursor": {
+            "type": "string"
+          },
+          "hasNextPage": {
+            "type": "boolean"
+          },
+          "hasPreviousPage": {
+            "type": "boolean"
+          },
+          "startCursor": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "totalCount": {
+        "type": "integer"
+      }
+    },
+    "type": "object"
+  }
 }

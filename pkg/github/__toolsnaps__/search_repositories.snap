@@ -50,5 +50,75 @@
     ],
     "type": "object"
   },
-  "name": "search_repositories"
+  "name": "search_repositories",
+  "outputSchema": {
+    "properties": {
+      "incomplete_results": {
+        "type": "boolean"
+      },
+      "items": {
+        "items": {
+          "properties": {
+            "archived": {
+              "type": "boolean"
+            },
+            "created_at": {
+              "type": "string"
+            },
+            "default_branch": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "fork": {
+              "type": "boolean"
+            },
+            "forks_count": {
+              "type": "integer"
+            },
+            "full_name": {
+              "type": "string"
+            },
+            "html_url": {
+              "type": "string"
+            },
+            "id": {
+              "type": "integer"
+            },
+            "language": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "open_issues_count": {
+              "type": "integer"
+            },
+            "private": {
+              "type": "boolean"
+            },
+            "stargazers_count": {
+              "type": "integer"
+            },
+            "topics": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "updated_at": {
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "total_count": {
+        "type": "integer"
+      }
+    },
+    "type": "object"
+  }
 }

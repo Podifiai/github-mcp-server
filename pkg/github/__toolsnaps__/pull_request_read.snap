@@ -51,5 +51,205 @@
     ],
     "type": "object"
   },
-  "name": "pull_request_read"
+  "name": "pull_request_read",
+  "outputSchema": {
+    "properties": {
+      "comments": {
+        "items": {
+          "properties": {
+            "body": {
+              "type": "string"
+            },
+            "created_at": {
+              "type": "string"
+            },
+            "html_url": {
+              "type": "string"
+            },
+            "id": {
+              "type": "integer"
+            },
+            "updated_at": {
+              "type": "string"
+            },
+            "user": {
+              "properties": {
+                "avatar_url": {
+                  "type": "string"
+                },
+                "html_url": {
+                  "type": "string"
+                },
+                "id": {
+                  "type": "integer"
+                },
+                "login": {
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            }
+          },
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "diff": {
+        "type": "string"
+      },
+      "files": {
+        "items": {
+          "properties": {
+            "additions": {
+              "type": "integer"
+            },
+            "changes": {
+              "type": "integer"
+            },
+            "deletions": {
+              "type": "integer"
+            },
+            "filename": {
+              "type": "string"
+            },
+            "patch": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "pull_request": {
+        "properties": {
+          "body": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "html_url": {
+            "type": "string"
+          },
+          "id": {
+            "type": "integer"
+          },
+          "number": {
+            "type": "integer"
+          },
+          "state": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          },
+          "user": {
+            "properties": {
+              "avatar_url": {
+                "type": "string"
+              },
+              "html_url": {
+                "type": "string"
+              },
+              "id": {
+                "type": "integer"
+              },
+              "login": {
+                "type": "string"
+              }
+            },
+            "type": "object"
+          }
+        },
+        "type": "object"
+      },
+      "review_comments": {
+        "type": "object"
+      },
+      "reviews": {
+        "items": {
+          "properties": {
+            "body": {
+              "type": "string"
+            },
+            "commit_id": {
+              "type": "string"
+            },
+            "html_url": {
+              "type": "string"
+            },
+            "id": {
+              "type": "integer"
+            },
+            "state": {
+              "type": "string"
+            },
+            "submitted_at": {
+              "type": "string"
+            },
+            "user": {
+              "properties": {
+                "avatar_url": {
+                  "type": "string"
+                },
+                "html_url": {
+                  "type": "string"
+                },
+                "id": {
+                  "type": "integer"
+                },
+                "login": {
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            }
+          },
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "status": {
+        "properties": {
+          "sha": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "statuses": {
+            "items": {
+              "properties": {
+                "context": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "state": {
+                  "type": "string"
+                },
+                "target_url": {
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "total_count": {
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      }
+    },
+    "type": "object"
+  }
 }

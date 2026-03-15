@@ -54,6 +54,74 @@ func GetCommit(t translations.TranslationHelperFunc) inventory.ServerTool {
 				},
 				Required: []string{"owner", "repo", "sha"},
 			}),
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"sha":      {Type: "string"},
+					"html_url": {Type: "string"},
+					"commit": {
+						Type: "object",
+						Properties: map[string]*jsonschema.Schema{
+							"message": {Type: "string"},
+							"author": {
+								Type: "object",
+								Properties: map[string]*jsonschema.Schema{
+									"name":  {Type: "string"},
+									"email": {Type: "string"},
+									"date":  {Type: "string"},
+								},
+							},
+							"committer": {
+								Type: "object",
+								Properties: map[string]*jsonschema.Schema{
+									"name":  {Type: "string"},
+									"email": {Type: "string"},
+									"date":  {Type: "string"},
+								},
+							},
+						},
+					},
+					"author": {
+						Type: "object",
+						Properties: map[string]*jsonschema.Schema{
+							"login":       {Type: "string"},
+							"id":          {Type: "integer"},
+							"profile_url": {Type: "string"},
+							"avatar_url":  {Type: "string"},
+						},
+					},
+					"committer": {
+						Type: "object",
+						Properties: map[string]*jsonschema.Schema{
+							"login":       {Type: "string"},
+							"id":          {Type: "integer"},
+							"profile_url": {Type: "string"},
+							"avatar_url":  {Type: "string"},
+						},
+					},
+					"stats": {
+						Type: "object",
+						Properties: map[string]*jsonschema.Schema{
+							"additions": {Type: "integer"},
+							"deletions": {Type: "integer"},
+							"total":     {Type: "integer"},
+						},
+					},
+					"files": {
+						Type: "array",
+						Items: &jsonschema.Schema{
+							Type: "object",
+							Properties: map[string]*jsonschema.Schema{
+								"filename":  {Type: "string"},
+								"status":    {Type: "string"},
+								"additions": {Type: "integer"},
+								"deletions": {Type: "integer"},
+								"changes":   {Type: "integer"},
+							},
+						},
+					},
+				},
+			},
 		},
 		[]scopes.Scope{scopes.Repo},
 		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *MinimalCommit, error) {
@@ -157,6 +225,61 @@ func ListCommits(t translations.TranslationHelperFunc) inventory.ServerTool {
 				},
 				Required: []string{"owner", "repo"},
 			}),
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"commits": {
+						Type: "array",
+						Items: &jsonschema.Schema{
+							Type: "object",
+							Properties: map[string]*jsonschema.Schema{
+								"sha":      {Type: "string"},
+								"html_url": {Type: "string"},
+								"commit": {
+									Type: "object",
+									Properties: map[string]*jsonschema.Schema{
+										"message": {Type: "string"},
+										"author": {
+											Type: "object",
+											Properties: map[string]*jsonschema.Schema{
+												"name":  {Type: "string"},
+												"email": {Type: "string"},
+												"date":  {Type: "string"},
+											},
+										},
+										"committer": {
+											Type: "object",
+											Properties: map[string]*jsonschema.Schema{
+												"name":  {Type: "string"},
+												"email": {Type: "string"},
+												"date":  {Type: "string"},
+											},
+										},
+									},
+								},
+								"author": {
+									Type: "object",
+									Properties: map[string]*jsonschema.Schema{
+										"login":       {Type: "string"},
+										"id":          {Type: "integer"},
+										"profile_url": {Type: "string"},
+										"avatar_url":  {Type: "string"},
+									},
+								},
+								"committer": {
+									Type: "object",
+									Properties: map[string]*jsonschema.Schema{
+										"login":       {Type: "string"},
+										"id":          {Type: "integer"},
+										"profile_url": {Type: "string"},
+										"avatar_url":  {Type: "string"},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
 		},
 		[]scopes.Scope{scopes.Repo},
 		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *ListCommitsResult, error) {
@@ -238,6 +361,44 @@ type ListBranchesResult struct {
 	Branches []MinimalBranch `json:"branches"`
 }
 
+// DeleteFileResult wraps the delete file response.
+type DeleteFileResult struct {
+	Commit  *github.Commit `json:"commit"`
+	Content any            `json:"content"`
+}
+
+// ListStarredRepositoriesResult wraps the list of starred repositories.
+type ListStarredRepositoriesResult struct {
+	Repositories []MinimalRepository `json:"repositories"`
+}
+
+// StarOperationResult represents the result of starring/unstarring a repository.
+type StarOperationResult struct {
+	Success bool   `json:"success"`
+	Message string `json:"message"`
+}
+
+// GetFileContentsResult wraps the get_file_contents response which can be either a file or directory.
+type GetFileContentsResult struct {
+	Type      string                      `json:"type"` // "file" or "directory"
+	File      *FileContents               `json:"file,omitempty"`
+	Directory []*github.RepositoryContent `json:"directory,omitempty"`
+}
+
+// FileContents represents a single file from get_file_contents.
+type FileContents struct {
+	Name        string `json:"name"`
+	Path        string `json:"path"`
+	SHA         string `json:"sha"`
+	Size        int    `json:"size"`
+	URL         string `json:"url"`
+	HTMLURL     string `json:"html_url"`
+	DownloadURL string `json:"download_url,omitempty"`
+	Type        string `json:"type"`
+	Content     string `json:"content,omitempty"`
+	Encoding    string `json:"encoding,omitempty"`
+}
+
 // ListBranches creates a tool to list branches in a GitHub repository.
 func ListBranches(t translations.TranslationHelperFunc) inventory.ServerTool {
 	return NewTool(
@@ -263,6 +424,22 @@ func ListBranches(t translations.TranslationHelperFunc) inventory.ServerTool {
 				},
 				Required: []string{"owner", "repo"},
 			}),
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"branches": {
+						Type: "array",
+						Items: &jsonschema.Schema{
+							Type: "object",
+							Properties: map[string]*jsonschema.Schema{
+								"name":      {Type: "string"},
+								"sha":       {Type: "string"},
+								"protected": {Type: "boolean"},
+							},
+						},
+					},
+				},
+			},
 		},
 		[]scopes.Scope{scopes.Repo},
 		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *ListBranchesResult, error) {
@@ -583,6 +760,13 @@ func CreateRepository(t translations.TranslationHelperFunc) inventory.ServerTool
 				},
 				Required: []string{"name"},
 			},
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"id":  {Type: "string"},
+					"url": {Type: "string"},
+				},
+			},
 		},
 		[]scopes.Scope{scopes.Repo},
 		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *MinimalResponse, error) {
@@ -690,9 +874,46 @@ func GetFileContents(t translations.TranslationHelperFunc) inventory.ServerTool 
 				},
 				Required: []string{"owner", "repo"},
 			},
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"type": {Type: "string", Enum: []any{"file", "directory"}},
+					"file": {
+						Type: "object",
+						Properties: map[string]*jsonschema.Schema{
+							"name":         {Type: "string"},
+							"path":         {Type: "string"},
+							"sha":          {Type: "string"},
+							"size":         {Type: "integer"},
+							"url":          {Type: "string"},
+							"html_url":     {Type: "string"},
+							"download_url": {Type: "string"},
+							"type":         {Type: "string"},
+							"content":      {Type: "string"},
+							"encoding":     {Type: "string"},
+						},
+					},
+					"directory": {
+						Type: "array",
+						Items: &jsonschema.Schema{
+							Type: "object",
+							Properties: map[string]*jsonschema.Schema{
+								"name":         {Type: "string"},
+								"path":         {Type: "string"},
+								"sha":          {Type: "string"},
+								"size":         {Type: "integer"},
+								"url":          {Type: "string"},
+								"html_url":     {Type: "string"},
+								"download_url": {Type: "string"},
+								"type":         {Type: "string"},
+							},
+						},
+					},
+				},
+			},
 		},
 		[]scopes.Scope{scopes.Repo},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *GetFileContentsResult, error) {
 			owner, err := RequiredParam[string](args, "owner")
 			if err != nil {
 				return utils.NewToolResultError(err.Error()), nil, nil
@@ -745,7 +966,9 @@ func GetFileContents(t translations.TranslationHelperFunc) inventory.ServerTool 
 			// The path does not point to a file or directory.
 			// Instead let's try to find it in the Git Tree by matching the end of the path.
 			if err != nil || (fileContent == nil && dirContent == nil) {
-				return matchFiles(ctx, client, owner, repo, ref, path, rawOpts, 0)
+				result, _, matchErr := matchFiles(ctx, client, owner, repo, ref, path, rawOpts, 0)
+				// matchFiles returns ResourceContents which doesn't have a typed Out
+				return result, nil, matchErr
 			}
 
 			if fileContent != nil && fileContent.SHA != nil {
@@ -818,11 +1041,15 @@ func GetFileContents(t translations.TranslationHelperFunc) inventory.ServerTool 
 				return utils.NewToolResultResource(fmt.Sprintf("successfully downloaded binary file (SHA: %s)%s", fileSHA, successNote), result), nil, nil
 			} else if dirContent != nil {
 				// file content or file SHA is nil which means it's a directory
+				result := &GetFileContentsResult{
+					Type:      "directory",
+					Directory: dirContent,
+				}
 				r, err := json.Marshal(dirContent)
 				if err != nil {
 					return utils.NewToolResultError("failed to marshal response"), nil, nil
 				}
-				return utils.NewToolResultText(string(r)), dirContent, nil
+				return utils.NewToolResultText(string(r)), result, nil
 			}
 
 			return utils.NewToolResultError("failed to get file contents"), nil, nil
@@ -859,6 +1086,13 @@ func ForkRepository(t translations.TranslationHelperFunc) inventory.ServerTool {
 					},
 				},
 				Required: []string{"owner", "repo"},
+			},
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"id":  {Type: "string"},
+					"url": {Type: "string"},
+				},
 			},
 		},
 		[]scopes.Scope{scopes.Repo},
@@ -967,9 +1201,31 @@ func DeleteFile(t translations.TranslationHelperFunc) inventory.ServerTool {
 				},
 				Required: []string{"owner", "repo", "path", "message", "branch"},
 			},
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"commit": {
+						Type: "object",
+						Properties: map[string]*jsonschema.Schema{
+							"sha":     {Type: "string"},
+							"url":     {Type: "string"},
+							"message": {Type: "string"},
+							"author": {
+								Type: "object",
+								Properties: map[string]*jsonschema.Schema{
+									"name":  {Type: "string"},
+									"email": {Type: "string"},
+									"date":  {Type: "string"},
+								},
+							},
+						},
+					},
+					"content": {Type: "null"},
+				},
+			},
 		},
 		[]scopes.Scope{scopes.Repo},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *DeleteFileResult, error) {
 			owner, err := RequiredParam[string](args, "owner")
 			if err != nil {
 				return utils.NewToolResultError(err.Error()), nil, nil
@@ -1099,17 +1355,17 @@ func DeleteFile(t translations.TranslationHelperFunc) inventory.ServerTool {
 			}
 
 			// Create a response similar to what the DeleteFile API would return
-			response := map[string]any{
-				"commit":  newCommit,
-				"content": nil,
+			result := &DeleteFileResult{
+				Commit:  newCommit,
+				Content: nil,
 			}
 
-			r, err := json.Marshal(response)
+			r, err := json.Marshal(result)
 			if err != nil {
 				return nil, nil, fmt.Errorf("failed to marshal response: %w", err)
 			}
 
-			return utils.NewToolResultText(string(r)), response, nil
+			return utils.NewToolResultText(string(r)), result, nil
 		},
 	)
 }
@@ -2032,9 +2288,36 @@ func ListStarredRepositories(t translations.TranslationHelperFunc) inventory.Ser
 					},
 				},
 			}),
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"repositories": {
+						Type: "array",
+						Items: &jsonschema.Schema{
+							Type: "object",
+							Properties: map[string]*jsonschema.Schema{
+								"id":                {Type: "integer"},
+								"name":              {Type: "string"},
+								"full_name":         {Type: "string"},
+								"description":       {Type: "string"},
+								"html_url":          {Type: "string"},
+								"language":          {Type: "string"},
+								"stargazers_count":  {Type: "integer"},
+								"forks_count":       {Type: "integer"},
+								"open_issues_count": {Type: "integer"},
+								"updated_at":        {Type: "string"},
+								"private":           {Type: "boolean"},
+								"fork":              {Type: "boolean"},
+								"archived":          {Type: "boolean"},
+								"default_branch":    {Type: "string"},
+							},
+						},
+					},
+				},
+			},
 		},
 		[]scopes.Scope{scopes.Repo},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *ListStarredRepositoriesResult, error) {
 			username, err := OptionalParam[string](args, "username")
 			if err != nil {
 				return utils.NewToolResultError(err.Error()), nil, nil
@@ -2129,7 +2412,7 @@ func ListStarredRepositories(t translations.TranslationHelperFunc) inventory.Ser
 				return nil, nil, fmt.Errorf("failed to marshal starred repositories: %w", err)
 			}
 
-			return utils.NewToolResultText(string(r)), nil, nil
+			return utils.NewToolResultText(string(r)), &ListStarredRepositoriesResult{Repositories: minimalRepos}, nil
 		},
 	)
 }
@@ -2160,9 +2443,16 @@ func StarRepository(t translations.TranslationHelperFunc) inventory.ServerTool {
 				},
 				Required: []string{"owner", "repo"},
 			},
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"success": {Type: "boolean"},
+					"message": {Type: "string"},
+				},
+			},
 		},
 		[]scopes.Scope{scopes.Repo},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *StarOperationResult, error) {
 			owner, err := RequiredParam[string](args, "owner")
 			if err != nil {
 				return utils.NewToolResultError(err.Error()), nil, nil
@@ -2195,7 +2485,17 @@ func StarRepository(t translations.TranslationHelperFunc) inventory.ServerTool {
 				return ghErrors.NewGitHubAPIStatusErrorResponse(ctx, "failed to star repository", resp, body), nil, nil
 			}
 
-			return utils.NewToolResultText(fmt.Sprintf("Successfully starred repository %s/%s", owner, repo)), nil, nil
+			result := &StarOperationResult{
+				Success: true,
+				Message: fmt.Sprintf("Successfully starred repository %s/%s", owner, repo),
+			}
+
+			r, err := json.Marshal(result)
+			if err != nil {
+				return nil, nil, fmt.Errorf("failed to marshal response: %w", err)
+			}
+
+			return utils.NewToolResultText(string(r)), result, nil
 		},
 	)
 }
@@ -2225,9 +2525,16 @@ func UnstarRepository(t translations.TranslationHelperFunc) inventory.ServerTool
 				},
 				Required: []string{"owner", "repo"},
 			},
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"success": {Type: "boolean"},
+					"message": {Type: "string"},
+				},
+			},
 		},
 		[]scopes.Scope{scopes.Repo},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *StarOperationResult, error) {
 			owner, err := RequiredParam[string](args, "owner")
 			if err != nil {
 				return utils.NewToolResultError(err.Error()), nil, nil
@@ -2260,7 +2567,17 @@ func UnstarRepository(t translations.TranslationHelperFunc) inventory.ServerTool
 				return ghErrors.NewGitHubAPIStatusErrorResponse(ctx, "failed to unstar repository", resp, body), nil, nil
 			}
 
-			return utils.NewToolResultText(fmt.Sprintf("Successfully unstarred repository %s/%s", owner, repo)), nil, nil
+			result := &StarOperationResult{
+				Success: true,
+				Message: fmt.Sprintf("Successfully unstarred repository %s/%s", owner, repo),
+			}
+
+			r, err := json.Marshal(result)
+			if err != nil {
+				return nil, nil, fmt.Errorf("failed to marshal response: %w", err)
+			}
+
+			return utils.NewToolResultText(string(r)), result, nil
 		},
 	)
 }

@@ -16,5 +16,31 @@
     ],
     "type": "object"
   },
-  "name": "get_global_security_advisory"
+  "name": "get_global_security_advisory",
+  "outputSchema": {
+    "properties": {
+      "cve_id": {
+        "type": "string"
+      },
+      "description": {
+        "type": "string"
+      },
+      "ghsa_id": {
+        "type": "string"
+      },
+      "html_url": {
+        "type": "string"
+      },
+      "severity": {
+        "type": "string"
+      },
+      "summary": {
+        "type": "string"
+      },
+      "type": {
+        "type": "string"
+      }
+    },
+    "type": "object"
+  }
 }

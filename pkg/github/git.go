@@ -76,9 +76,35 @@ func GetRepositoryTree(t translations.TranslationHelperFunc) inventory.ServerToo
 				},
 				Required: []string{"owner", "repo"},
 			},
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"sha":       {Type: "string"},
+					"truncated": {Type: "boolean"},
+					"tree": {
+						Type: "array",
+						Items: &jsonschema.Schema{
+							Type: "object",
+							Properties: map[string]*jsonschema.Schema{
+								"path": {Type: "string"},
+								"type": {Type: "string"},
+								"size": {Type: "integer"},
+								"mode": {Type: "string"},
+								"sha":  {Type: "string"},
+								"url":  {Type: "string"},
+							},
+						},
+					},
+					"tree_sha":  {Type: "string"},
+					"owner":     {Type: "string"},
+					"repo":      {Type: "string"},
+					"recursive": {Type: "boolean"},
+					"count":     {Type: "integer"},
+				},
+			},
 		},
 		[]scopes.Scope{scopes.Repo},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *TreeResponse, error) {
 			owner, err := RequiredParam[string](args, "owner")
 			if err != nil {
 				return utils.NewToolResultError(err.Error()), nil, nil
@@ -155,7 +181,7 @@ func GetRepositoryTree(t translations.TranslationHelperFunc) inventory.ServerToo
 				}
 			}
 
-			response := TreeResponse{
+			response := &TreeResponse{
 				SHA:       *tree.SHA,
 				Truncated: *tree.Truncated,
 				Tree:      treeEntries,
@@ -171,7 +197,7 @@ func GetRepositoryTree(t translations.TranslationHelperFunc) inventory.ServerToo
 				return nil, nil, fmt.Errorf("failed to marshal response: %w", err)
 			}
 
-			return utils.NewToolResultText(string(r)), nil, nil
+			return utils.NewToolResultText(string(r)), response, nil
 		},
 	)
 }

@@ -17,6 +17,10 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
+type ListDependabotAlertsResult struct {
+	Alerts []*github.DependabotAlert `json:"alerts"`
+}
+
 func GetDependabotAlert(t translations.TranslationHelperFunc) inventory.ServerTool {
 	return NewTool(
 		ToolsetMetadataDependabot,
@@ -45,9 +49,40 @@ func GetDependabotAlert(t translations.TranslationHelperFunc) inventory.ServerTo
 				},
 				Required: []string{"owner", "repo", "alertNumber"},
 			},
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"number":   {Type: "integer"},
+					"state":    {Type: "string"},
+					"html_url": {Type: "string"},
+					"severity": {Type: "string"},
+					"security_advisory": {
+						Type: "object",
+						Properties: map[string]*jsonschema.Schema{
+							"ghsa_id":     {Type: "string"},
+							"cve_id":      {Type: "string"},
+							"summary":     {Type: "string"},
+							"description": {Type: "string"},
+							"severity":    {Type: "string"},
+						},
+					},
+					"dependency": {
+						Type: "object",
+						Properties: map[string]*jsonschema.Schema{
+							"package": {
+								Type: "object",
+								Properties: map[string]*jsonschema.Schema{
+									"name":      {Type: "string"},
+									"ecosystem": {Type: "string"},
+								},
+							},
+						},
+					},
+				},
+			},
 		},
 		[]scopes.Scope{scopes.SecurityEvents},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *github.DependabotAlert, error) {
 			owner, err := RequiredParam[string](args, "owner")
 			if err != nil {
 				return utils.NewToolResultError(err.Error()), nil, nil
@@ -89,7 +124,7 @@ func GetDependabotAlert(t translations.TranslationHelperFunc) inventory.ServerTo
 				return utils.NewToolResultErrorFromErr("failed to marshal alert", err), nil, err
 			}
 
-			return utils.NewToolResultText(string(r)), nil, nil
+			return utils.NewToolResultText(string(r)), alert, nil
 		},
 	)
 }
@@ -129,9 +164,48 @@ func ListDependabotAlerts(t translations.TranslationHelperFunc) inventory.Server
 				},
 				Required: []string{"owner", "repo"},
 			},
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"alerts": {
+						Type: "array",
+						Items: &jsonschema.Schema{
+							Type: "object",
+							Properties: map[string]*jsonschema.Schema{
+								"number":   {Type: "integer"},
+								"state":    {Type: "string"},
+								"html_url": {Type: "string"},
+								"severity": {Type: "string"},
+								"security_advisory": {
+									Type: "object",
+									Properties: map[string]*jsonschema.Schema{
+										"ghsa_id":     {Type: "string"},
+										"cve_id":      {Type: "string"},
+										"summary":     {Type: "string"},
+										"description": {Type: "string"},
+										"severity":    {Type: "string"},
+									},
+								},
+								"dependency": {
+									Type: "object",
+									Properties: map[string]*jsonschema.Schema{
+										"package": {
+											Type: "object",
+											Properties: map[string]*jsonschema.Schema{
+												"name":      {Type: "string"},
+												"ecosystem": {Type: "string"},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
 		},
 		[]scopes.Scope{scopes.SecurityEvents},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *ListDependabotAlertsResult, error) {
 			owner, err := RequiredParam[string](args, "owner")
 			if err != nil {
 				return utils.NewToolResultError(err.Error()), nil, nil
@@ -180,7 +254,7 @@ func ListDependabotAlerts(t translations.TranslationHelperFunc) inventory.Server
 				return utils.NewToolResultErrorFromErr("failed to marshal alerts", err), nil, err
 			}
 
-			return utils.NewToolResultText(string(r)), nil, nil
+			return utils.NewToolResultText(string(r)), &ListDependabotAlertsResult{Alerts: alerts}, nil
 		},
 	)
 }

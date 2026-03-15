@@ -42,5 +42,66 @@
     ],
     "type": "object"
   },
-  "name": "list_dependabot_alerts"
+  "name": "list_dependabot_alerts",
+  "outputSchema": {
+    "properties": {
+      "alerts": {
+        "items": {
+          "properties": {
+            "dependency": {
+              "properties": {
+                "package": {
+                  "properties": {
+                    "ecosystem": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              },
+              "type": "object"
+            },
+            "html_url": {
+              "type": "string"
+            },
+            "number": {
+              "type": "integer"
+            },
+            "security_advisory": {
+              "properties": {
+                "cve_id": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "ghsa_id": {
+                  "type": "string"
+                },
+                "severity": {
+                  "type": "string"
+                },
+                "summary": {
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "severity": {
+              "type": "string"
+            },
+            "state": {
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "type": "array"
+      }
+    },
+    "type": "object"
+  }
 }

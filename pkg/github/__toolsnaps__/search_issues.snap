@@ -60,5 +60,53 @@
     ],
     "type": "object"
   },
-  "name": "search_issues"
+  "name": "search_issues",
+  "outputSchema": {
+    "properties": {
+      "issues": {
+        "items": {
+          "properties": {
+            "body": {
+              "type": "string"
+            },
+            "created_at": {
+              "type": "string"
+            },
+            "html_url": {
+              "type": "string"
+            },
+            "id": {
+              "type": "integer"
+            },
+            "number": {
+              "type": "integer"
+            },
+            "state": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "updated_at": {
+              "type": "string"
+            },
+            "user": {
+              "properties": {
+                "login": {
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            }
+          },
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "total_count": {
+        "type": "integer"
+      }
+    },
+    "type": "object"
+  }
 }

@@ -39,6 +39,44 @@ const (
 	projectsMethodDeleteProjectItem = "delete_project_item"
 )
 
+// ProjectsListResult wraps various list operation results
+type ProjectsListResult struct {
+	Projects *[]struct {
+		ID     any    `json:"id"`
+		Number int    `json:"number"`
+		Title  string `json:"title"`
+		URL    string `json:"url"`
+	} `json:"projects,omitempty"`
+	Fields *[]struct {
+		ID   any    `json:"id"`
+		Name string `json:"name"`
+	} `json:"fields,omitempty"`
+	Items *[]struct {
+		ID any `json:"id"`
+	} `json:"items,omitempty"`
+	PageInfo *struct {
+		HasNextPage     bool   `json:"hasNextPage"`
+		HasPreviousPage bool   `json:"hasPreviousPage"`
+		NextCursor      string `json:"nextCursor,omitempty"`
+		PrevCursor      string `json:"prevCursor,omitempty"`
+	} `json:"pageInfo,omitempty"`
+}
+
+// ProjectsGetResult wraps various get operation results
+type ProjectsGetResult struct {
+	ID     any     `json:"id,omitempty"`
+	Number *int    `json:"number,omitempty"`
+	Title  *string `json:"title,omitempty"`
+	URL    *string `json:"url,omitempty"`
+	Name   *string `json:"name,omitempty"`
+}
+
+// ProjectsWriteResult wraps various write operation results
+type ProjectsWriteResult struct {
+	ID      any     `json:"id,omitempty"`
+	Message *string `json:"message,omitempty"`
+}
+
 // ProjectsList returns the tool and handler for listing GitHub Projects resources.
 func ProjectsList(t translations.TranslationHelperFunc) inventory.ServerTool {
 	tool := NewTool(
@@ -52,6 +90,51 @@ Use this tool to list projects for a user or organization, or list project field
 			Annotations: &mcp.ToolAnnotations{
 				Title:        t("TOOL_PROJECTS_LIST_USER_TITLE", "List GitHub Projects resources"),
 				ReadOnlyHint: true,
+			},
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"projects": {
+						Type: "array",
+						Items: &jsonschema.Schema{
+							Type: "object",
+							Properties: map[string]*jsonschema.Schema{
+								"id":     {Type: "string"},
+								"number": {Type: "integer"},
+								"title":  {Type: "string"},
+								"url":    {Type: "string"},
+							},
+						},
+					},
+					"fields": {
+						Type: "array",
+						Items: &jsonschema.Schema{
+							Type: "object",
+							Properties: map[string]*jsonschema.Schema{
+								"id":   {Type: "string"},
+								"name": {Type: "string"},
+							},
+						},
+					},
+					"items": {
+						Type: "array",
+						Items: &jsonschema.Schema{
+							Type: "object",
+							Properties: map[string]*jsonschema.Schema{
+								"id": {Type: "string"},
+							},
+						},
+					},
+					"pageInfo": {
+						Type: "object",
+						Properties: map[string]*jsonschema.Schema{
+							"hasNextPage":     {Type: "boolean"},
+							"hasPreviousPage": {Type: "boolean"},
+							"nextCursor":      {Type: "string"},
+							"prevCursor":      {Type: "string"},
+						},
+					},
+				},
 			},
 			InputSchema: &jsonschema.Schema{
 				Type: "object",
@@ -106,7 +189,7 @@ Use this tool to list projects for a user or organization, or list project field
 			},
 		},
 		[]scopes.Scope{scopes.ReadProject},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *ProjectsListResult, error) {
 			method, err := RequiredParam[string](args, "method")
 			if err != nil {
 				return utils.NewToolResultError(err.Error()), nil, nil
@@ -177,6 +260,16 @@ Use this tool to get details about individual projects, project fields, and proj
 				Title:        t("TOOL_PROJECTS_GET_USER_TITLE", "Get details of GitHub Projects resources"),
 				ReadOnlyHint: true,
 			},
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"id":     {Type: "string"},
+					"number": {Type: "integer"},
+					"title":  {Type: "string"},
+					"url":    {Type: "string"},
+					"name":   {Type: "string"},
+				},
+			},
 			InputSchema: &jsonschema.Schema{
 				Type: "object",
 				Properties: map[string]*jsonschema.Schema{
@@ -222,7 +315,7 @@ Use this tool to get details about individual projects, project fields, and proj
 			},
 		},
 		[]scopes.Scope{scopes.ReadProject},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *ProjectsGetResult, error) {
 			method, err := RequiredParam[string](args, "method")
 			if err != nil {
 				return utils.NewToolResultError(err.Error()), nil, nil
@@ -295,6 +388,13 @@ func ProjectsWrite(t translations.TranslationHelperFunc) inventory.ServerTool {
 				ReadOnlyHint:    false,
 				DestructiveHint: jsonschema.Ptr(true),
 			},
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"id":      {Type: "string"},
+					"message": {Type: "string"},
+				},
+			},
 			InputSchema: &jsonschema.Schema{
 				Type: "object",
 				Properties: map[string]*jsonschema.Schema{
@@ -354,7 +454,7 @@ func ProjectsWrite(t translations.TranslationHelperFunc) inventory.ServerTool {
 			},
 		},
 		[]scopes.Scope{scopes.Project},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *ProjectsWriteResult, error) {
 			method, err := RequiredParam[string](args, "method")
 			if err != nil {
 				return utils.NewToolResultError(err.Error()), nil, nil
@@ -455,7 +555,7 @@ func ProjectsWrite(t translations.TranslationHelperFunc) inventory.ServerTool {
 
 // Helper functions for consolidated projects tools
 
-func listProjects(ctx context.Context, client *github.Client, args map[string]any, owner, ownerType string) (*mcp.CallToolResult, any, error) {
+func listProjects(ctx context.Context, client *github.Client, args map[string]any, owner, ownerType string) (*mcp.CallToolResult, *ProjectsListResult, error) {
 	queryStr, err := OptionalParam[string](args, "query")
 	if err != nil {
 		return utils.NewToolResultError(err.Error()), nil, nil
@@ -524,7 +624,13 @@ func listProjects(ctx context.Context, client *github.Client, args map[string]an
 			return nil, nil, fmt.Errorf("failed to marshal response: %w", err)
 		}
 
-		return utils.NewToolResultText(string(r)), nil, nil
+		// Convert to typed result
+		var typedResult ProjectsListResult
+		if err := json.Unmarshal(r, &typedResult); err != nil {
+			return nil, nil, fmt.Errorf("failed to unmarshal response: %w", err)
+		}
+
+		return utils.NewToolResultText(string(r)), &typedResult, nil
 	}
 
 	return nil, nil, fmt.Errorf("unexpected state in listProjects")
@@ -532,7 +638,7 @@ func listProjects(ctx context.Context, client *github.Client, args map[string]an
 
 // listProjectsFromBothOwnerTypes fetches projects from both user and org endpoints
 // when owner_type is not specified, combining the results with owner_type labels.
-func listProjectsFromBothOwnerTypes(ctx context.Context, client *github.Client, owner string, opts *github.ListProjectsOptions) (*mcp.CallToolResult, any, error) {
+func listProjectsFromBothOwnerTypes(ctx context.Context, client *github.Client, owner string, opts *github.ListProjectsOptions) (*mcp.CallToolResult, *ProjectsListResult, error) {
 	var minimalProjects []MinimalProject
 	var resp *github.Response
 
@@ -579,10 +685,17 @@ func listProjectsFromBothOwnerTypes(ctx context.Context, client *github.Client, 
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to marshal response: %w", err)
 	}
-	return utils.NewToolResultText(string(r)), nil, nil
+
+	// Convert to typed result
+	var typedResult ProjectsListResult
+	if err := json.Unmarshal(r, &typedResult); err != nil {
+		return nil, nil, fmt.Errorf("failed to unmarshal response: %w", err)
+	}
+
+	return utils.NewToolResultText(string(r)), &typedResult, nil
 }
 
-func listProjectFields(ctx context.Context, client *github.Client, args map[string]any, owner, ownerType string) (*mcp.CallToolResult, any, error) {
+func listProjectFields(ctx context.Context, client *github.Client, args map[string]any, owner, ownerType string) (*mcp.CallToolResult, *ProjectsListResult, error) {
 	projectNumber, err := RequiredInt(args, "project_number")
 	if err != nil {
 		return utils.NewToolResultError(err.Error()), nil, nil
@@ -625,10 +738,16 @@ func listProjectFields(ctx context.Context, client *github.Client, args map[stri
 		return nil, nil, fmt.Errorf("failed to marshal response: %w", err)
 	}
 
-	return utils.NewToolResultText(string(r)), nil, nil
+	// Convert to typed result
+	var typedResult ProjectsListResult
+	if err := json.Unmarshal(r, &typedResult); err != nil {
+		return nil, nil, fmt.Errorf("failed to unmarshal response: %w", err)
+	}
+
+	return utils.NewToolResultText(string(r)), &typedResult, nil
 }
 
-func listProjectItems(ctx context.Context, client *github.Client, args map[string]any, owner, ownerType string) (*mcp.CallToolResult, any, error) {
+func listProjectItems(ctx context.Context, client *github.Client, args map[string]any, owner, ownerType string) (*mcp.CallToolResult, *ProjectsListResult, error) {
 	projectNumber, err := RequiredInt(args, "project_number")
 	if err != nil {
 		return utils.NewToolResultError(err.Error()), nil, nil
@@ -690,10 +809,16 @@ func listProjectItems(ctx context.Context, client *github.Client, args map[strin
 		return nil, nil, fmt.Errorf("failed to marshal response: %w", err)
 	}
 
-	return utils.NewToolResultText(string(r)), nil, nil
+	// Convert to typed result
+	var typedResult ProjectsListResult
+	if err := json.Unmarshal(r, &typedResult); err != nil {
+		return nil, nil, fmt.Errorf("failed to unmarshal response: %w", err)
+	}
+
+	return utils.NewToolResultText(string(r)), &typedResult, nil
 }
 
-func getProject(ctx context.Context, client *github.Client, owner, ownerType string, projectNumber int) (*mcp.CallToolResult, any, error) {
+func getProject(ctx context.Context, client *github.Client, owner, ownerType string, projectNumber int) (*mcp.CallToolResult, *ProjectsGetResult, error) {
 	var resp *github.Response
 	var project *github.ProjectV2
 	var err error
@@ -726,10 +851,16 @@ func getProject(ctx context.Context, client *github.Client, owner, ownerType str
 		return nil, nil, fmt.Errorf("failed to marshal response: %w", err)
 	}
 
-	return utils.NewToolResultText(string(r)), nil, nil
+	// Convert to typed result
+	var typedResult ProjectsGetResult
+	if err := json.Unmarshal(r, &typedResult); err != nil {
+		return nil, nil, fmt.Errorf("failed to unmarshal response: %w", err)
+	}
+
+	return utils.NewToolResultText(string(r)), &typedResult, nil
 }
 
-func getProjectField(ctx context.Context, client *github.Client, owner, ownerType string, projectNumber int, fieldID int64) (*mcp.CallToolResult, any, error) {
+func getProjectField(ctx context.Context, client *github.Client, owner, ownerType string, projectNumber int, fieldID int64) (*mcp.CallToolResult, *ProjectsGetResult, error) {
 	var resp *github.Response
 	var projectField *github.ProjectV2Field
 	var err error
@@ -761,10 +892,16 @@ func getProjectField(ctx context.Context, client *github.Client, owner, ownerTyp
 		return nil, nil, fmt.Errorf("failed to marshal response: %w", err)
 	}
 
-	return utils.NewToolResultText(string(r)), nil, nil
+	// Convert to typed result
+	var typedResult ProjectsGetResult
+	if err := json.Unmarshal(r, &typedResult); err != nil {
+		return nil, nil, fmt.Errorf("failed to unmarshal response: %w", err)
+	}
+
+	return utils.NewToolResultText(string(r)), &typedResult, nil
 }
 
-func getProjectItem(ctx context.Context, client *github.Client, owner, ownerType string, projectNumber int, itemID int64, fields []int64) (*mcp.CallToolResult, any, error) {
+func getProjectItem(ctx context.Context, client *github.Client, owner, ownerType string, projectNumber int, itemID int64, fields []int64) (*mcp.CallToolResult, *ProjectsGetResult, error) {
 	var resp *github.Response
 	var projectItem *github.ProjectV2Item
 	var opts *github.GetProjectItemOptions
@@ -804,10 +941,16 @@ func getProjectItem(ctx context.Context, client *github.Client, owner, ownerType
 		return nil, nil, fmt.Errorf("failed to marshal response: %w", err)
 	}
 
-	return utils.NewToolResultText(string(r)), nil, nil
+	// Convert to typed result
+	var typedResult ProjectsGetResult
+	if err := json.Unmarshal(r, &typedResult); err != nil {
+		return nil, nil, fmt.Errorf("failed to unmarshal response: %w", err)
+	}
+
+	return utils.NewToolResultText(string(r)), &typedResult, nil
 }
 
-func updateProjectItem(ctx context.Context, client *github.Client, owner, ownerType string, projectNumber int, itemID int64, fieldValue map[string]any) (*mcp.CallToolResult, any, error) {
+func updateProjectItem(ctx context.Context, client *github.Client, owner, ownerType string, projectNumber int, itemID int64, fieldValue map[string]any) (*mcp.CallToolResult, *ProjectsWriteResult, error) {
 	updatePayload, err := buildUpdateProjectItem(fieldValue)
 	if err != nil {
 		return utils.NewToolResultError(err.Error()), nil, nil
@@ -843,10 +986,16 @@ func updateProjectItem(ctx context.Context, client *github.Client, owner, ownerT
 		return nil, nil, fmt.Errorf("failed to marshal response: %w", err)
 	}
 
-	return utils.NewToolResultText(string(r)), nil, nil
+	// Convert to typed result
+	var typedResult ProjectsWriteResult
+	if err := json.Unmarshal(r, &typedResult); err != nil {
+		return nil, nil, fmt.Errorf("failed to unmarshal response: %w", err)
+	}
+
+	return utils.NewToolResultText(string(r)), &typedResult, nil
 }
 
-func deleteProjectItem(ctx context.Context, client *github.Client, owner, ownerType string, projectNumber int, itemID int64) (*mcp.CallToolResult, any, error) {
+func deleteProjectItem(ctx context.Context, client *github.Client, owner, ownerType string, projectNumber int, itemID int64) (*mcp.CallToolResult, *ProjectsWriteResult, error) {
 	var resp *github.Response
 	var err error
 
@@ -872,11 +1021,14 @@ func deleteProjectItem(ctx context.Context, client *github.Client, owner, ownerT
 		}
 		return ghErrors.NewGitHubAPIStatusErrorResponse(ctx, ProjectDeleteFailedError, resp, body), nil, nil
 	}
-	return utils.NewToolResultText("project item successfully deleted"), nil, nil
+
+	message := "project item successfully deleted"
+	typedResult := &ProjectsWriteResult{Message: &message}
+	return utils.NewToolResultText(message), typedResult, nil
 }
 
 // addProjectItem adds an item to a project by resolving the issue/PR number to a node ID
-func addProjectItem(ctx context.Context, gqlClient *githubv4.Client, owner, ownerType string, projectNumber int, itemOwner, itemRepo string, itemNumber int, itemType string) (*mcp.CallToolResult, any, error) {
+func addProjectItem(ctx context.Context, gqlClient *githubv4.Client, owner, ownerType string, projectNumber int, itemOwner, itemRepo string, itemNumber int, itemType string) (*mcp.CallToolResult, *ProjectsWriteResult, error) {
 	if itemType != "issue" && itemType != "pull_request" {
 		return utils.NewToolResultError("item_type must be either 'issue' or 'pull_request'"), nil, nil
 	}
@@ -960,7 +1112,13 @@ func addProjectItem(ctx context.Context, gqlClient *githubv4.Client, owner, owne
 		return nil, nil, fmt.Errorf("failed to marshal response: %w", err)
 	}
 
-	return utils.NewToolResultText(string(r)), nil, nil
+	// Convert to typed result
+	var typedResult ProjectsWriteResult
+	if err := json.Unmarshal(r, &typedResult); err != nil {
+		return nil, nil, fmt.Errorf("failed to unmarshal response: %w", err)
+	}
+
+	return utils.NewToolResultText(string(r)), &typedResult, nil
 }
 
 type pageInfo struct {

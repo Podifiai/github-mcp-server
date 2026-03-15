@@ -123,6 +123,27 @@ func getQueryType(useOrdering bool, categoryID *githubv4.ID) any {
 	return &BasicNoOrder{}
 }
 
+type ListDiscussionsResult struct {
+	Discussions []struct {
+		Number  int    `json:"number"`
+		Title   string `json:"title"`
+		HTMLURL string `json:"html_url"`
+		User    struct {
+			Login string `json:"login"`
+		} `json:"user"`
+		DiscussionCategory struct {
+			Name string `json:"name"`
+		} `json:"category"`
+	} `json:"discussions"`
+	PageInfo struct {
+		HasNextPage     bool   `json:"hasNextPage"`
+		HasPreviousPage bool   `json:"hasPreviousPage"`
+		StartCursor     string `json:"startCursor"`
+		EndCursor       string `json:"endCursor"`
+	} `json:"pageInfo"`
+	TotalCount int `json:"totalCount"`
+}
+
 func ListDiscussions(t translations.TranslationHelperFunc) inventory.ServerTool {
 	return NewTool(
 		ToolsetMetadataDiscussions,
@@ -161,9 +182,35 @@ func ListDiscussions(t translations.TranslationHelperFunc) inventory.ServerTool 
 				},
 				Required: []string{"owner"},
 			}),
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"discussions": {
+						Type: "array",
+						Items: &jsonschema.Schema{
+							Type: "object",
+							Properties: map[string]*jsonschema.Schema{
+								"number":   {Type: "integer"},
+								"title":    {Type: "string"},
+								"html_url": {Type: "string"},
+							},
+						},
+					},
+					"pageInfo": {
+						Type: "object",
+						Properties: map[string]*jsonschema.Schema{
+							"hasNextPage":     {Type: "boolean"},
+							"hasPreviousPage": {Type: "boolean"},
+							"startCursor":     {Type: "string"},
+							"endCursor":       {Type: "string"},
+						},
+					},
+					"totalCount": {Type: "integer"},
+				},
+			},
 		},
 		[]scopes.Scope{scopes.Repo},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *ListDiscussionsResult, error) {
 			owner, err := RequiredParam[string](args, "owner")
 			if err != nil {
 				return utils.NewToolResultError(err.Error()), nil, nil
@@ -271,9 +318,28 @@ func ListDiscussions(t translations.TranslationHelperFunc) inventory.ServerTool 
 			if err != nil {
 				return nil, nil, fmt.Errorf("failed to marshal discussions: %w", err)
 			}
-			return utils.NewToolResultText(string(out)), nil, nil
+
+			// Convert response to typed result
+			var typedResult ListDiscussionsResult
+			if err := json.Unmarshal(out, &typedResult); err != nil {
+				return nil, nil, fmt.Errorf("failed to unmarshal discussions: %w", err)
+			}
+
+			return utils.NewToolResultText(string(out)), &typedResult, nil
 		},
 	)
+}
+
+type GetDiscussionResult struct {
+	Number     int    `json:"number"`
+	Title      string `json:"title"`
+	Body       string `json:"body"`
+	URL        string `json:"url"`
+	Closed     bool   `json:"closed"`
+	IsAnswered bool   `json:"isAnswered"`
+	Category   struct {
+		Name string `json:"name"`
+	} `json:"category"`
 }
 
 func GetDiscussion(t translations.TranslationHelperFunc) inventory.ServerTool {
@@ -304,9 +370,26 @@ func GetDiscussion(t translations.TranslationHelperFunc) inventory.ServerTool {
 				},
 				Required: []string{"owner", "repo", "discussionNumber"},
 			},
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"number":     {Type: "integer"},
+					"title":      {Type: "string"},
+					"body":       {Type: "string"},
+					"url":        {Type: "string"},
+					"closed":     {Type: "boolean"},
+					"isAnswered": {Type: "boolean"},
+					"category": {
+						Type: "object",
+						Properties: map[string]*jsonschema.Schema{
+							"name": {Type: "string"},
+						},
+					},
+				},
+			},
 		},
 		[]scopes.Scope{scopes.Repo},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *GetDiscussionResult, error) {
 			// Decode params
 			var params struct {
 				Owner            string
@@ -375,9 +458,28 @@ func GetDiscussion(t translations.TranslationHelperFunc) inventory.ServerTool {
 				return nil, nil, fmt.Errorf("failed to marshal discussion: %w", err)
 			}
 
-			return utils.NewToolResultText(string(out)), nil, nil
+			// Convert response to typed result
+			var typedResult GetDiscussionResult
+			if err := json.Unmarshal(out, &typedResult); err != nil {
+				return nil, nil, fmt.Errorf("failed to unmarshal discussion: %w", err)
+			}
+
+			return utils.NewToolResultText(string(out)), &typedResult, nil
 		},
 	)
+}
+
+type GetDiscussionCommentsResult struct {
+	Comments []struct {
+		Body string `json:"body"`
+	} `json:"comments"`
+	PageInfo struct {
+		HasNextPage     bool   `json:"hasNextPage"`
+		HasPreviousPage bool   `json:"hasPreviousPage"`
+		StartCursor     string `json:"startCursor"`
+		EndCursor       string `json:"endCursor"`
+	} `json:"pageInfo"`
+	TotalCount int `json:"totalCount"`
 }
 
 func GetDiscussionComments(t translations.TranslationHelperFunc) inventory.ServerTool {
@@ -408,9 +510,33 @@ func GetDiscussionComments(t translations.TranslationHelperFunc) inventory.Serve
 				},
 				Required: []string{"owner", "repo", "discussionNumber"},
 			}),
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"comments": {
+						Type: "array",
+						Items: &jsonschema.Schema{
+							Type: "object",
+							Properties: map[string]*jsonschema.Schema{
+								"body": {Type: "string"},
+							},
+						},
+					},
+					"pageInfo": {
+						Type: "object",
+						Properties: map[string]*jsonschema.Schema{
+							"hasNextPage":     {Type: "boolean"},
+							"hasPreviousPage": {Type: "boolean"},
+							"startCursor":     {Type: "string"},
+							"endCursor":       {Type: "string"},
+						},
+					},
+					"totalCount": {Type: "integer"},
+				},
+			},
 		},
 		[]scopes.Scope{scopes.Repo},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *GetDiscussionCommentsResult, error) {
 			// Decode params
 			var params struct {
 				Owner            string
@@ -502,9 +628,29 @@ func GetDiscussionComments(t translations.TranslationHelperFunc) inventory.Serve
 				return nil, nil, fmt.Errorf("failed to marshal comments: %w", err)
 			}
 
-			return utils.NewToolResultText(string(out)), nil, nil
+			// Convert response to typed result
+			var typedResult GetDiscussionCommentsResult
+			if err := json.Unmarshal(out, &typedResult); err != nil {
+				return nil, nil, fmt.Errorf("failed to unmarshal comments: %w", err)
+			}
+
+			return utils.NewToolResultText(string(out)), &typedResult, nil
 		},
 	)
+}
+
+type ListDiscussionCategoriesResult struct {
+	Categories []struct {
+		ID   string `json:"id"`
+		Name string `json:"name"`
+	} `json:"categories"`
+	PageInfo struct {
+		HasNextPage     bool   `json:"hasNextPage"`
+		HasPreviousPage bool   `json:"hasPreviousPage"`
+		StartCursor     string `json:"startCursor"`
+		EndCursor       string `json:"endCursor"`
+	} `json:"pageInfo"`
+	TotalCount int `json:"totalCount"`
 }
 
 func ListDiscussionCategories(t translations.TranslationHelperFunc) inventory.ServerTool {
@@ -531,9 +677,34 @@ func ListDiscussionCategories(t translations.TranslationHelperFunc) inventory.Se
 				},
 				Required: []string{"owner"},
 			},
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"categories": {
+						Type: "array",
+						Items: &jsonschema.Schema{
+							Type: "object",
+							Properties: map[string]*jsonschema.Schema{
+								"id":   {Type: "string"},
+								"name": {Type: "string"},
+							},
+						},
+					},
+					"pageInfo": {
+						Type: "object",
+						Properties: map[string]*jsonschema.Schema{
+							"hasNextPage":     {Type: "boolean"},
+							"hasPreviousPage": {Type: "boolean"},
+							"startCursor":     {Type: "string"},
+							"endCursor":       {Type: "string"},
+						},
+					},
+					"totalCount": {Type: "integer"},
+				},
+			},
 		},
 		[]scopes.Scope{scopes.Repo},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *ListDiscussionCategoriesResult, error) {
 			owner, err := RequiredParam[string](args, "owner")
 			if err != nil {
 				return utils.NewToolResultError(err.Error()), nil, nil
@@ -603,7 +774,14 @@ func ListDiscussionCategories(t translations.TranslationHelperFunc) inventory.Se
 			if err != nil {
 				return nil, nil, fmt.Errorf("failed to marshal discussion categories: %w", err)
 			}
-			return utils.NewToolResultText(string(out)), nil, nil
+
+			// Convert response to typed result
+			var typedResult ListDiscussionCategoriesResult
+			if err := json.Unmarshal(out, &typedResult); err != nil {
+				return nil, nil, fmt.Errorf("failed to unmarshal discussion categories: %w", err)
+			}
+
+			return utils.NewToolResultText(string(out)), &typedResult, nil
 		},
 	)
 }

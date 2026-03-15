@@ -40,5 +40,60 @@
     },
     "type": "object"
   },
-  "name": "list_starred_repositories"
+  "name": "list_starred_repositories",
+  "outputSchema": {
+    "properties": {
+      "repositories": {
+        "items": {
+          "properties": {
+            "archived": {
+              "type": "boolean"
+            },
+            "default_branch": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "fork": {
+              "type": "boolean"
+            },
+            "forks_count": {
+              "type": "integer"
+            },
+            "full_name": {
+              "type": "string"
+            },
+            "html_url": {
+              "type": "string"
+            },
+            "id": {
+              "type": "integer"
+            },
+            "language": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "open_issues_count": {
+              "type": "integer"
+            },
+            "private": {
+              "type": "boolean"
+            },
+            "stargazers_count": {
+              "type": "integer"
+            },
+            "updated_at": {
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "type": "array"
+      }
+    },
+    "type": "object"
+  }
 }

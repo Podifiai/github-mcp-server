@@ -43,5 +43,39 @@
     ],
     "type": "object"
   },
-  "name": "list_org_repository_security_advisories"
+  "name": "list_org_repository_security_advisories",
+  "outputSchema": {
+    "properties": {
+      "advisories": {
+        "items": {
+          "properties": {
+            "cve_id": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "ghsa_id": {
+              "type": "string"
+            },
+            "html_url": {
+              "type": "string"
+            },
+            "severity": {
+              "type": "string"
+            },
+            "state": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "type": "array"
+      }
+    },
+    "type": "object"
+  }
 }

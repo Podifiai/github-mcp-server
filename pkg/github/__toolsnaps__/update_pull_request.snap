@@ -60,5 +60,16 @@
     ],
     "type": "object"
   },
-  "name": "update_pull_request"
+  "name": "update_pull_request",
+  "outputSchema": {
+    "properties": {
+      "id": {
+        "type": "string"
+      },
+      "url": {
+        "type": "string"
+      }
+    },
+    "type": "object"
+  }
 }

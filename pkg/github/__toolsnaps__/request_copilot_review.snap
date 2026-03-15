@@ -37,5 +37,13 @@
     ],
     "type": "object"
   },
-  "name": "request_copilot_review"
+  "name": "request_copilot_review",
+  "outputSchema": {
+    "properties": {
+      "message": {
+        "type": "string"
+      }
+    },
+    "type": "object"
+  }
 }

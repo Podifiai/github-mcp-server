@@ -54,6 +54,37 @@ func GetMe(t translations.TranslationHelperFunc) inventory.ServerTool {
 			// Use json.RawMessage to ensure "properties" is included even when empty.
 			// OpenAI strict mode requires the properties field to be present.
 			InputSchema: json.RawMessage(`{"type":"object","properties":{}}`),
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"login":       {Type: "string"},
+					"id":          {Type: "integer"},
+					"profile_url": {Type: "string"},
+					"avatar_url":  {Type: "string"},
+					"details": {
+						Type: "object",
+						Properties: map[string]*jsonschema.Schema{
+							"name":                {Type: "string"},
+							"company":             {Type: "string"},
+							"blog":                {Type: "string"},
+							"location":            {Type: "string"},
+							"email":               {Type: "string"},
+							"hireable":            {Type: "boolean"},
+							"bio":                 {Type: "string"},
+							"twitter_username":    {Type: "string"},
+							"public_repos":        {Type: "integer"},
+							"public_gists":        {Type: "integer"},
+							"followers":           {Type: "integer"},
+							"following":           {Type: "integer"},
+							"created_at":          {Type: "string"},
+							"updated_at":          {Type: "string"},
+							"private_gists":       {Type: "integer"},
+							"total_private_repos": {Type: "integer"},
+							"owned_private_repos": {Type: "integer"},
+						},
+					},
+				},
+			},
 			Meta: mcp.Meta{
 				"ui": map[string]any{
 					"resourceUri": GetMeUIResourceURI,
@@ -145,6 +176,31 @@ func GetTeams(t translations.TranslationHelperFunc) inventory.ServerTool {
 					"user": {
 						Type:        "string",
 						Description: t("TOOL_GET_TEAMS_USER_DESCRIPTION", "Username to get teams for. If not provided, uses the authenticated user."),
+					},
+				},
+			},
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"organizations": {
+						Type: "array",
+						Items: &jsonschema.Schema{
+							Type: "object",
+							Properties: map[string]*jsonschema.Schema{
+								"org": {Type: "string"},
+								"teams": {
+									Type: "array",
+									Items: &jsonschema.Schema{
+										Type: "object",
+										Properties: map[string]*jsonschema.Schema{
+											"name":        {Type: "string"},
+											"slug":        {Type: "string"},
+											"description": {Type: "string"},
+										},
+									},
+								},
+							},
+						},
 					},
 				},
 			},
@@ -250,6 +306,15 @@ func GetTeamMembers(t translations.TranslationHelperFunc) inventory.ServerTool {
 					},
 				},
 				Required: []string{"org", "team_slug"},
+			},
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"members": {
+						Type:  "array",
+						Items: &jsonschema.Schema{Type: "string"},
+					},
+				},
 			},
 		},
 		[]scopes.Scope{scopes.ReadOrg},

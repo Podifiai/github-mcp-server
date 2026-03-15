@@ -124,5 +124,54 @@
     ],
     "type": "object"
   },
-  "name": "actions_list"
+  "name": "actions_list",
+  "outputSchema": {
+    "properties": {
+      "artifacts": {
+        "properties": {
+          "artifacts": {
+            "type": "array"
+          },
+          "total_count": {
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "jobs": {
+        "properties": {
+          "jobs": {
+            "type": "array"
+          },
+          "total_count": {
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "workflow_runs": {
+        "properties": {
+          "total_count": {
+            "type": "integer"
+          },
+          "workflow_runs": {
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "workflows": {
+        "properties": {
+          "total_count": {
+            "type": "integer"
+          },
+          "workflows": {
+            "type": "array"
+          }
+        },
+        "type": "object"
+      }
+    },
+    "type": "object"
+  }
 }

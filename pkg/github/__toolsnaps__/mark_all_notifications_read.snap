@@ -20,5 +20,13 @@
     },
     "type": "object"
   },
-  "name": "mark_all_notifications_read"
+  "name": "mark_all_notifications_read",
+  "outputSchema": {
+    "properties": {
+      "message": {
+        "type": "string"
+      }
+    },
+    "type": "object"
+  }
 }

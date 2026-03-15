@@ -71,5 +71,16 @@
     ],
     "type": "object"
   },
-  "name": "projects_write"
+  "name": "projects_write",
+  "outputSchema": {
+    "properties": {
+      "id": {
+        "type": "string"
+      },
+      "message": {
+        "type": "string"
+      }
+    },
+    "type": "object"
+  }
 }

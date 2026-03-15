@@ -50,5 +50,47 @@
     ],
     "type": "object"
   },
-  "name": "list_discussions"
+  "name": "list_discussions",
+  "outputSchema": {
+    "properties": {
+      "discussions": {
+        "items": {
+          "properties": {
+            "html_url": {
+              "type": "string"
+            },
+            "number": {
+              "type": "integer"
+            },
+            "title": {
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "pageInfo": {
+        "properties": {
+          "endCursor": {
+            "type": "string"
+          },
+          "hasNextPage": {
+            "type": "boolean"
+          },
+          "hasPreviousPage": {
+            "type": "boolean"
+          },
+          "startCursor": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "totalCount": {
+        "type": "integer"
+      }
+    },
+    "type": "object"
+  }
 }

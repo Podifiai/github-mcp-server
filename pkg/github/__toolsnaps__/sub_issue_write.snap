@@ -47,5 +47,39 @@
     ],
     "type": "object"
   },
-  "name": "sub_issue_write"
+  "name": "sub_issue_write",
+  "outputSchema": {
+    "properties": {
+      "created_at": {
+        "type": "string"
+      },
+      "html_url": {
+        "type": "string"
+      },
+      "id": {
+        "type": "integer"
+      },
+      "number": {
+        "type": "integer"
+      },
+      "state": {
+        "type": "string"
+      },
+      "title": {
+        "type": "string"
+      },
+      "updated_at": {
+        "type": "string"
+      },
+      "user": {
+        "properties": {
+          "login": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      }
+    },
+    "type": "object"
+  }
 }

@@ -29,5 +29,16 @@
     ],
     "type": "object"
   },
-  "name": "update_gist"
+  "name": "update_gist",
+  "outputSchema": {
+    "properties": {
+      "id": {
+        "type": "string"
+      },
+      "url": {
+        "type": "string"
+      }
+    },
+    "type": "object"
+  }
 }
