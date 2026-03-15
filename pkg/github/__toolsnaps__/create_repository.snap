@@ -31,5 +31,16 @@
     ],
     "type": "object"
   },
-  "name": "create_repository"
+  "name": "create_repository",
+  "outputSchema": {
+    "properties": {
+      "id": {
+        "type": "string"
+      },
+      "url": {
+        "type": "string"
+      }
+    },
+    "type": "object"
+  }
 }

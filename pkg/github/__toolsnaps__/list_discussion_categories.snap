@@ -20,5 +20,44 @@
     ],
     "type": "object"
   },
-  "name": "list_discussion_categories"
+  "name": "list_discussion_categories",
+  "outputSchema": {
+    "properties": {
+      "categories": {
+        "items": {
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "pageInfo": {
+        "properties": {
+          "endCursor": {
+            "type": "string"
+          },
+          "hasNextPage": {
+            "type": "boolean"
+          },
+          "hasPreviousPage": {
+            "type": "boolean"
+          },
+          "startCursor": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "totalCount": {
+        "type": "integer"
+      }
+    },
+    "type": "object"
+  }
 }

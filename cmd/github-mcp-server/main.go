@@ -94,6 +94,7 @@ var (
 				LockdownMode:         viper.GetBool("lockdown-mode"),
 				InsidersMode:         viper.GetBool("insiders"),
 				ExcludeTools:         excludeTools,
+				StructuredContent:    viper.GetBool("structured-content"),
 				RepoAccessCacheTTL:   &ttl,
 			}
 			return ghmcp.RunStdioServer(stdioServerConfig)
@@ -119,6 +120,7 @@ var (
 				LockdownMode:         viper.GetBool("lockdown-mode"),
 				RepoAccessCacheTTL:   &ttl,
 				ScopeChallenge:       viper.GetBool("scope-challenge"),
+				StructuredContent:    viper.GetBool("structured-content"),
 			}
 
 			return ghhttp.RunHTTPServer(httpConfig)
@@ -146,6 +148,7 @@ func init() {
 	rootCmd.PersistentFlags().Int("content-window-size", 5000, "Specify the content window size")
 	rootCmd.PersistentFlags().Bool("lockdown-mode", false, "Enable lockdown mode")
 	rootCmd.PersistentFlags().Bool("insiders", false, "Enable insiders features")
+	rootCmd.PersistentFlags().Bool("structured-content", false, "Enable structured content and output schemas in tool results")
 	rootCmd.PersistentFlags().Duration("repo-access-cache-ttl", 5*time.Minute, "Override the repo access cache TTL (e.g. 1m, 0s to disable)")
 
 	// HTTP-specific flags
@@ -169,6 +172,7 @@ func init() {
 	_ = viper.BindPFlag("lockdown-mode", rootCmd.PersistentFlags().Lookup("lockdown-mode"))
 	_ = viper.BindPFlag("insiders", rootCmd.PersistentFlags().Lookup("insiders"))
 	_ = viper.BindPFlag("repo-access-cache-ttl", rootCmd.PersistentFlags().Lookup("repo-access-cache-ttl"))
+	_ = viper.BindPFlag("structured-content", rootCmd.PersistentFlags().Lookup("structured-content"))
 	_ = viper.BindPFlag("port", httpCmd.Flags().Lookup("port"))
 	_ = viper.BindPFlag("base-url", httpCmd.Flags().Lookup("base-url"))
 	_ = viper.BindPFlag("base-path", httpCmd.Flags().Lookup("base-path"))

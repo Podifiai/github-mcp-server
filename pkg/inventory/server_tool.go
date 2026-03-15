@@ -3,8 +3,10 @@ package inventory
 import (
 	"context"
 	"encoding/json"
+	"reflect"
 
 	"github.com/github/github-mcp-server/pkg/octicons"
+	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -59,6 +61,12 @@ type ServerTool struct {
 	// and handlers are only created when needed.
 	HandlerFunc HandlerFunc
 
+	// TypedRegisterFunc registers the tool using the generic mcp.AddTool[In, Out],
+	// which enables OutputSchema inference and StructuredContent population.
+	// Set by constructors that have access to type parameters (In, Out).
+	// When nil, the tool falls back to the non-generic s.AddTool registration.
+	TypedRegisterFunc func(s *mcp.Server)
+
 	// FeatureFlagEnable specifies a feature flag that must be enabled for this tool
 	// to be available. If set and the flag is not enabled, the tool is omitted.
 	FeatureFlagEnable string
@@ -86,6 +94,12 @@ type ServerTool struct {
 	// InsidersOnly marks this tool as only available when insiders mode is enabled.
 	// When insiders mode is disabled, tools with this flag set are completely omitted.
 	InsidersOnly bool
+
+	// OutType is the reflect.Type of the Out type parameter used in the tool's handler.
+	// Set by generic constructors (NewServerTool, NewServerToolWithContextHandler) that
+	// have access to the Out type parameter. Used in tests to validate that OutputSchema
+	// covers all fields of the actual structured content output type.
+	OutType reflect.Type
 }
 
 // IsReadOnly returns true if this tool is marked as read-only via annotations.
@@ -110,8 +124,14 @@ func (st *ServerTool) Handler(deps any) mcp.ToolHandler {
 // RegisterFunc registers the tool with the server using the provided dependencies.
 // Icons are automatically applied from the toolset metadata if not already set.
 // A shallow copy of the tool is made to avoid mutating the original ServerTool.
+// When structuredContent is true and the tool has a TypedRegisterFunc, it uses the
+// generic mcp.AddTool[In, Out] path which enables OutputSchema and StructuredContent.
 // Panics if the tool has no handler - all tools should have handlers.
-func (st *ServerTool) RegisterFunc(s *mcp.Server, deps any) {
+func (st *ServerTool) RegisterFunc(s *mcp.Server, deps any, structuredContent bool) {
+	if structuredContent && st.TypedRegisterFunc != nil {
+		st.TypedRegisterFunc(s)
+		return
+	}
 	handler := st.Handler(deps) // This will panic if HandlerFunc is nil
 	// Make a shallow copy of the tool to avoid mutating the original
 	toolCopy := st.Tool
@@ -132,6 +152,7 @@ func NewServerTool[In any, Out any](tool mcp.Tool, toolset ToolsetMetadata, hand
 	return ServerTool{
 		Tool:    tool,
 		Toolset: toolset,
+		OutType: reflect.TypeFor[Out](),
 		HandlerFunc: func(deps any) mcp.ToolHandler {
 			typedHandler := handlerFn(deps)
 			return func(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -143,6 +164,9 @@ func NewServerTool[In any, Out any](tool mcp.Tool, toolset ToolsetMetadata, hand
 				return resp, err
 			}
 		},
+		// Note: TypedRegisterFunc is not set for the deprecated NewServerTool because
+		// it takes a deps-based handler factory. The typed registration path requires
+		// a context-based handler (NewServerToolWithContextHandler).
 	}
 }
 
@@ -156,6 +180,7 @@ func NewServerToolWithContextHandler[In any, Out any](tool mcp.Tool, toolset Too
 	return ServerTool{
 		Tool:    tool,
 		Toolset: toolset,
+		OutType: reflect.TypeFor[Out](),
 		// HandlerFunc ignores deps - deps are retrieved from context at call time
 		HandlerFunc: func(_ any) mcp.ToolHandler {
 			return func(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -166,6 +191,35 @@ func NewServerToolWithContextHandler[In any, Out any](tool mcp.Tool, toolset Too
 				resp, _, err := handler(ctx, req, arguments)
 				return resp, err
 			}
+		},
+		// TypedRegisterFunc uses the generic mcp.AddTool to preserve type info
+		// for OutputSchema inference and StructuredContent population.
+		TypedRegisterFunc: func(s *mcp.Server) {
+			toolCopy := tool
+			if len(toolCopy.Icons) == 0 {
+				toolCopy.Icons = toolset.Icons()
+			}
+			// Wrap handler to clear Content on success so the SDK regenerates
+			// the text content block from StructuredContent. This ensures the
+			// text block matches the structured data (same key ordering, etc.)
+			// for backwards-compatible clients. On error paths (IsError=true),
+			// we return a JSON-RPC error to avoid structured content validation.
+			// The spec requires structuredContent to match outputSchema with no
+			// exception for error results, so protocol-level errors are used instead.
+			mcp.AddTool(s, &toolCopy, func(ctx context.Context, req *mcp.CallToolRequest, args In) (*mcp.CallToolResult, Out, error) {
+				res, out, err := handler(ctx, req, args)
+				if res != nil && res.IsError {
+					var zero Out
+					return nil, zero, &jsonrpc.Error{
+						Code:    jsonrpc.CodeInternalError,
+						Message: extractTextFromResult(res),
+					}
+				}
+				if res != nil {
+					res.Content = nil
+				}
+				return res, out, err
+			})
 		},
 	}
 }
@@ -194,4 +248,21 @@ func NewServerToolWithRawContextHandler(tool mcp.Tool, toolset ToolsetMetadata, 
 			return handler
 		},
 	}
+}
+
+// extractTextFromResult concatenates text content blocks from a CallToolResult.
+func extractTextFromResult(res *mcp.CallToolResult) string {
+	var msg string
+	for _, c := range res.Content {
+		if tc, ok := c.(*mcp.TextContent); ok {
+			if msg != "" {
+				msg += "\n"
+			}
+			msg += tc.Text
+		}
+	}
+	if msg == "" {
+		return "tool error"
+	}
+	return msg
 }

@@ -30,5 +30,19 @@
     ],
     "type": "object"
   },
-  "name": "manage_repository_notification_subscription"
+  "name": "manage_repository_notification_subscription",
+  "outputSchema": {
+    "properties": {
+      "ignored": {
+        "type": "boolean"
+      },
+      "message": {
+        "type": "string"
+      },
+      "subscribed": {
+        "type": "boolean"
+      }
+    },
+    "type": "object"
+  }
 }

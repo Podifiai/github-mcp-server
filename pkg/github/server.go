@@ -57,6 +57,11 @@ type MCPServerConfig struct {
 	// InsidersMode indicates if we should enable experimental features
 	InsidersMode bool
 
+	// StructuredContent enables structured content and output schemas in tool results.
+	// When enabled, tools are registered using the generic mcp.AddTool[In, Out] path,
+	// which populates OutputSchema and StructuredContent in tool results.
+	StructuredContent bool
+
 	// Logger is used for logging within the server
 	Logger *slog.Logger
 	// RepoAccessTTL overrides the default TTL for repository access cache entries.
@@ -137,7 +142,7 @@ func registerDynamicTools(server *mcp.Server, inventory *inventory.Inventory, de
 		T:         t,
 	}
 	for _, tool := range DynamicTools(inventory) {
-		tool.RegisterFunc(server, dynamicDeps)
+		tool.RegisterFunc(server, dynamicDeps, inventory.StructuredContent())
 	}
 }
 

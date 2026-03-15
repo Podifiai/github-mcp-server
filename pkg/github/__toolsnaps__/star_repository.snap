@@ -32,5 +32,16 @@
     ],
     "type": "object"
   },
-  "name": "star_repository"
+  "name": "star_repository",
+  "outputSchema": {
+    "properties": {
+      "message": {
+        "type": "string"
+      },
+      "success": {
+        "type": "boolean"
+      }
+    },
+    "type": "object"
+  }
 }

@@ -93,5 +93,16 @@
     ],
     "type": "object"
   },
-  "name": "issue_write"
+  "name": "issue_write",
+  "outputSchema": {
+    "properties": {
+      "id": {
+        "type": "string"
+      },
+      "url": {
+        "type": "string"
+      }
+    },
+    "type": "object"
+  }
 }

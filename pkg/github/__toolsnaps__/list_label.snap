@@ -21,5 +21,33 @@
     ],
     "type": "object"
   },
-  "name": "list_label"
+  "name": "list_label",
+  "outputSchema": {
+    "properties": {
+      "labels": {
+        "items": {
+          "properties": {
+            "color": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "total_count": {
+        "type": "integer"
+      }
+    },
+    "type": "object"
+  }
 }

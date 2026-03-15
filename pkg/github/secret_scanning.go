@@ -17,6 +17,10 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
+type ListSecretScanningAlertsResult struct {
+	Alerts []*github.SecretScanningAlert `json:"alerts"`
+}
+
 func GetSecretScanningAlert(t translations.TranslationHelperFunc) inventory.ServerTool {
 	return NewTool(
 		ToolsetMetadataSecretProtection,
@@ -45,9 +49,56 @@ func GetSecretScanningAlert(t translations.TranslationHelperFunc) inventory.Serv
 				},
 				Required: []string{"owner", "repo", "alertNumber"},
 			},
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"number":        {Type: "integer"},
+					"created_at":    {Type: "string"},
+					"url":           {Type: "string"},
+					"html_url":      {Type: "string"},
+					"locations_url": {Type: "string"},
+					"first_location_detected": {
+						Type: "object",
+						Properties: map[string]*jsonschema.Schema{
+							"path":                     {Type: "string"},
+							"start_line":               {Type: "integer"},
+							"end_line":                 {Type: "integer"},
+							"start_column":             {Type: "integer"},
+							"end_column":               {Type: "integer"},
+							"blob_sha":                 {Type: "string"},
+							"blob_url":                 {Type: "string"},
+							"commit_sha":               {Type: "string"},
+							"commit_url":               {Type: "string"},
+							"pull_request_comment_url": {Type: "string"},
+						},
+					},
+					"has_more_locations":                      {Type: "boolean"},
+					"state":                                   {Type: "string"},
+					"resolution":                              {Type: "string"},
+					"resolved_at":                             {Type: "string"},
+					"resolved_by":                             UserSchema(),
+					"secret_type":                             {Type: "string"},
+					"secret_type_display_name":                {Type: "string"},
+					"secret":                                  {Type: "string"},
+					"repository":                              {Type: "object"},
+					"updated_at":                              {Type: "string"},
+					"is_base64_encoded":                       {Type: "boolean"},
+					"multi_repo":                              {Type: "boolean"},
+					"publicly_leaked":                         {Type: "boolean"},
+					"push_protection_bypassed":                {Type: "boolean"},
+					"push_protection_bypassed_by":             UserSchema(),
+					"push_protection_bypassed_at":             {Type: "string"},
+					"resolution_comment":                      {Type: "string"},
+					"push_protection_bypass_request_comment":  {Type: "string"},
+					"push_protection_bypass_request_html_url": {Type: "string"},
+					"push_protection_bypass_request_reviewer": UserSchema(),
+					"push_protection_bypass_request_reviewer_comment": {Type: "string"},
+					"validity": {Type: "string"},
+				},
+			},
 		},
 		[]scopes.Scope{scopes.SecurityEvents},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *github.SecretScanningAlert, error) {
 			owner, err := RequiredParam[string](args, "owner")
 			if err != nil {
 				return utils.NewToolResultError(err.Error()), nil, nil
@@ -89,7 +140,7 @@ func GetSecretScanningAlert(t translations.TranslationHelperFunc) inventory.Serv
 				return nil, nil, fmt.Errorf("failed to marshal alert: %w", err)
 			}
 
-			return utils.NewToolResultText(string(r)), nil, nil
+			return utils.NewToolResultText(string(r)), alert, nil
 		},
 	)
 }
@@ -132,9 +183,64 @@ func ListSecretScanningAlerts(t translations.TranslationHelperFunc) inventory.Se
 				},
 				Required: []string{"owner", "repo"},
 			},
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"alerts": {
+						Type: "array",
+						Items: &jsonschema.Schema{
+							Type: "object",
+							Properties: map[string]*jsonschema.Schema{
+								"number":        {Type: "integer"},
+								"created_at":    {Type: "string"},
+								"url":           {Type: "string"},
+								"html_url":      {Type: "string"},
+								"locations_url": {Type: "string"},
+								"first_location_detected": {
+									Type: "object",
+									Properties: map[string]*jsonschema.Schema{
+										"path":                     {Type: "string"},
+										"start_line":               {Type: "integer"},
+										"end_line":                 {Type: "integer"},
+										"start_column":             {Type: "integer"},
+										"end_column":               {Type: "integer"},
+										"blob_sha":                 {Type: "string"},
+										"blob_url":                 {Type: "string"},
+										"commit_sha":               {Type: "string"},
+										"commit_url":               {Type: "string"},
+										"pull_request_comment_url": {Type: "string"},
+									},
+								},
+								"has_more_locations":                      {Type: "boolean"},
+								"state":                                   {Type: "string"},
+								"resolution":                              {Type: "string"},
+								"resolved_at":                             {Type: "string"},
+								"resolved_by":                             UserSchema(),
+								"secret_type":                             {Type: "string"},
+								"secret_type_display_name":                {Type: "string"},
+								"secret":                                  {Type: "string"},
+								"repository":                              {Type: "object"},
+								"updated_at":                              {Type: "string"},
+								"is_base64_encoded":                       {Type: "boolean"},
+								"multi_repo":                              {Type: "boolean"},
+								"publicly_leaked":                         {Type: "boolean"},
+								"push_protection_bypassed":                {Type: "boolean"},
+								"push_protection_bypassed_by":             UserSchema(),
+								"push_protection_bypassed_at":             {Type: "string"},
+								"resolution_comment":                      {Type: "string"},
+								"push_protection_bypass_request_comment":  {Type: "string"},
+								"push_protection_bypass_request_html_url": {Type: "string"},
+								"push_protection_bypass_request_reviewer": UserSchema(),
+								"push_protection_bypass_request_reviewer_comment": {Type: "string"},
+								"validity": {Type: "string"},
+							},
+						},
+					},
+				},
+			},
 		},
 		[]scopes.Scope{scopes.SecurityEvents},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *ListSecretScanningAlertsResult, error) {
 			owner, err := RequiredParam[string](args, "owner")
 			if err != nil {
 				return utils.NewToolResultError(err.Error()), nil, nil
@@ -183,7 +289,7 @@ func ListSecretScanningAlerts(t translations.TranslationHelperFunc) inventory.Se
 				return nil, nil, fmt.Errorf("failed to marshal alerts: %w", err)
 			}
 
-			return utils.NewToolResultText(string(r)), nil, nil
+			return utils.NewToolResultText(string(r)), &ListSecretScanningAlertsResult{Alerts: alerts}, nil
 		},
 	)
 }

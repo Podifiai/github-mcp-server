@@ -44,5 +44,39 @@
     ],
     "type": "object"
   },
-  "name": "search_orgs"
+  "name": "search_orgs",
+  "outputSchema": {
+    "properties": {
+      "incomplete_results": {
+        "type": "boolean"
+      },
+      "items": {
+        "items": {
+          "properties": {
+            "avatar_url": {
+              "type": "string"
+            },
+            "details": {
+              "type": "object"
+            },
+            "id": {
+              "type": "integer"
+            },
+            "login": {
+              "type": "string"
+            },
+            "profile_url": {
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "total_count": {
+        "type": "integer"
+      }
+    },
+    "type": "object"
+  }
 }

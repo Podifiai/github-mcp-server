@@ -26,5 +26,22 @@
     ],
     "type": "object"
   },
-  "name": "get_label"
+  "name": "get_label",
+  "outputSchema": {
+    "properties": {
+      "color": {
+        "type": "string"
+      },
+      "description": {
+        "type": "string"
+      },
+      "id": {
+        "type": "string"
+      },
+      "name": {
+        "type": "string"
+      }
+    },
+    "type": "object"
+  }
 }

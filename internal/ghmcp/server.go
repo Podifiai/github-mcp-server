@@ -138,7 +138,8 @@ func NewStdioMCPServer(ctx context.Context, cfg github.MCPServerConfig) (*mcp.Se
 		WithExcludeTools(cfg.ExcludeTools).
 		WithServerInstructions().
 		WithFeatureChecker(featureChecker).
-		WithInsidersMode(cfg.InsidersMode)
+		WithInsidersMode(cfg.InsidersMode).
+		WithStructuredContent(cfg.StructuredContent)
 
 	// Apply token scope filtering if scopes are known (for PAT filtering)
 	if cfg.TokenScopes != nil {
@@ -220,6 +221,9 @@ type StdioServerConfig struct {
 	// explicitly listed in EnabledTools.
 	ExcludeTools []string
 
+	// StructuredContent enables structured content and output schemas in tool results
+	StructuredContent bool
+
 	// RepoAccessCacheTTL overrides the default TTL for repository access cache entries.
 	RepoAccessCacheTTL *time.Duration
 }
@@ -278,6 +282,7 @@ func RunStdioServer(cfg StdioServerConfig) error {
 		LockdownMode:      cfg.LockdownMode,
 		InsidersMode:      cfg.InsidersMode,
 		ExcludeTools:      cfg.ExcludeTools,
+		StructuredContent: cfg.StructuredContent,
 		Logger:            logger,
 		RepoAccessTTL:     cfg.RepoAccessCacheTTL,
 		TokenScopes:       tokenScopes,

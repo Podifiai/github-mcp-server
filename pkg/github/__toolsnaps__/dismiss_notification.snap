@@ -24,5 +24,13 @@
     ],
     "type": "object"
   },
-  "name": "dismiss_notification"
+  "name": "dismiss_notification",
+  "outputSchema": {
+    "properties": {
+      "message": {
+        "type": "string"
+      }
+    },
+    "type": "object"
+  }
 }

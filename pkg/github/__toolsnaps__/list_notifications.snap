@@ -45,5 +45,55 @@
     },
     "type": "object"
   },
-  "name": "list_notifications"
+  "name": "list_notifications",
+  "outputSchema": {
+    "properties": {
+      "notifications": {
+        "items": {
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "reason": {
+              "type": "string"
+            },
+            "repository": {
+              "properties": {
+                "full_name": {
+                  "type": "string"
+                },
+                "html_url": {
+                  "type": "string"
+                },
+                "id": {
+                  "type": "integer"
+                }
+              },
+              "type": "object"
+            },
+            "subject": {
+              "properties": {
+                "title": {
+                  "type": "string"
+                },
+                "type": {
+                  "type": "string"
+                },
+                "url": {
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "unread": {
+              "type": "boolean"
+            }
+          },
+          "type": "object"
+        },
+        "type": "array"
+      }
+    },
+    "type": "object"
+  }
 }

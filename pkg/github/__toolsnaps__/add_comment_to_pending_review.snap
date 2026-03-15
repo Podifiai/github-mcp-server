@@ -68,5 +68,13 @@
     ],
     "type": "object"
   },
-  "name": "add_comment_to_pending_review"
+  "name": "add_comment_to_pending_review",
+  "outputSchema": {
+    "properties": {
+      "message": {
+        "type": "string"
+      }
+    },
+    "type": "object"
+  }
 }

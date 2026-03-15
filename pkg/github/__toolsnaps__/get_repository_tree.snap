@@ -34,5 +34,57 @@
     ],
     "type": "object"
   },
-  "name": "get_repository_tree"
+  "name": "get_repository_tree",
+  "outputSchema": {
+    "properties": {
+      "count": {
+        "type": "integer"
+      },
+      "owner": {
+        "type": "string"
+      },
+      "recursive": {
+        "type": "boolean"
+      },
+      "repo": {
+        "type": "string"
+      },
+      "sha": {
+        "type": "string"
+      },
+      "tree": {
+        "items": {
+          "properties": {
+            "mode": {
+              "type": "string"
+            },
+            "path": {
+              "type": "string"
+            },
+            "sha": {
+              "type": "string"
+            },
+            "size": {
+              "type": "integer"
+            },
+            "type": {
+              "type": "string"
+            },
+            "url": {
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "tree_sha": {
+        "type": "string"
+      },
+      "truncated": {
+        "type": "boolean"
+      }
+    },
+    "type": "object"
+  }
 }

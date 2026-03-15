@@ -26,5 +26,225 @@
     ],
     "type": "object"
   },
-  "name": "get_release_by_tag"
+  "name": "get_release_by_tag",
+  "outputSchema": {
+    "properties": {
+      "assets": {
+        "items": {
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "assets_url": {
+        "type": "string"
+      },
+      "author": {
+        "properties": {
+          "assignment": {
+            "type": "string"
+          },
+          "avatar_url": {
+            "type": "string"
+          },
+          "bio": {
+            "type": "string"
+          },
+          "blog": {
+            "type": "string"
+          },
+          "collaborators": {
+            "type": "integer"
+          },
+          "company": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "disk_usage": {
+            "type": "integer"
+          },
+          "email": {
+            "type": "string"
+          },
+          "events_url": {
+            "type": "string"
+          },
+          "followers": {
+            "type": "integer"
+          },
+          "followers_url": {
+            "type": "string"
+          },
+          "following": {
+            "type": "integer"
+          },
+          "following_url": {
+            "type": "string"
+          },
+          "gists_url": {
+            "type": "string"
+          },
+          "gravatar_id": {
+            "type": "string"
+          },
+          "hireable": {
+            "type": "boolean"
+          },
+          "html_url": {
+            "type": "string"
+          },
+          "id": {
+            "type": "integer"
+          },
+          "inherited_from": {
+            "items": {
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "ldap_dn": {
+            "type": "string"
+          },
+          "location": {
+            "type": "string"
+          },
+          "login": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "node_id": {
+            "type": "string"
+          },
+          "organizations_url": {
+            "type": "string"
+          },
+          "owned_private_repos": {
+            "type": "integer"
+          },
+          "permissions": {
+            "type": "object"
+          },
+          "plan": {
+            "type": "object"
+          },
+          "private_gists": {
+            "type": "integer"
+          },
+          "public_gists": {
+            "type": "integer"
+          },
+          "public_repos": {
+            "type": "integer"
+          },
+          "received_events_url": {
+            "type": "string"
+          },
+          "repos_url": {
+            "type": "string"
+          },
+          "role_name": {
+            "type": "string"
+          },
+          "site_admin": {
+            "type": "boolean"
+          },
+          "starred_url": {
+            "type": "string"
+          },
+          "subscriptions_url": {
+            "type": "string"
+          },
+          "suspended_at": {
+            "type": "string"
+          },
+          "text_matches": {
+            "items": {
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "total_private_repos": {
+            "type": "integer"
+          },
+          "twitter_username": {
+            "type": "string"
+          },
+          "two_factor_authentication": {
+            "type": "boolean"
+          },
+          "type": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "body": {
+        "type": "string"
+      },
+      "created_at": {
+        "type": "string"
+      },
+      "discussion_category_name": {
+        "type": "string"
+      },
+      "draft": {
+        "type": "boolean"
+      },
+      "generate_release_notes": {
+        "type": "boolean"
+      },
+      "html_url": {
+        "type": "string"
+      },
+      "id": {
+        "type": "integer"
+      },
+      "immutable": {
+        "type": "boolean"
+      },
+      "make_latest": {
+        "type": "string"
+      },
+      "name": {
+        "type": "string"
+      },
+      "node_id": {
+        "type": "string"
+      },
+      "prerelease": {
+        "type": "boolean"
+      },
+      "published_at": {
+        "type": "string"
+      },
+      "tag_name": {
+        "type": "string"
+      },
+      "tarball_url": {
+        "type": "string"
+      },
+      "target_commitish": {
+        "type": "string"
+      },
+      "upload_url": {
+        "type": "string"
+      },
+      "url": {
+        "type": "string"
+      },
+      "zipball_url": {
+        "type": "string"
+      }
+    },
+    "type": "object"
+  }
 }

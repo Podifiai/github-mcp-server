@@ -36,5 +36,16 @@
     ],
     "type": "object"
   },
-  "name": "fork_repository"
+  "name": "fork_repository",
+  "outputSchema": {
+    "properties": {
+      "id": {
+        "type": "string"
+      },
+      "url": {
+        "type": "string"
+      }
+    },
+    "type": "object"
+  }
 }

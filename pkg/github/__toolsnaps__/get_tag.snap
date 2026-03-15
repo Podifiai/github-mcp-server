@@ -26,5 +26,73 @@
     ],
     "type": "object"
   },
-  "name": "get_tag"
+  "name": "get_tag",
+  "outputSchema": {
+    "properties": {
+      "message": {
+        "type": "string"
+      },
+      "node_id": {
+        "type": "string"
+      },
+      "object": {
+        "properties": {
+          "sha": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "sha": {
+        "type": "string"
+      },
+      "tag": {
+        "type": "string"
+      },
+      "tagger": {
+        "properties": {
+          "date": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "url": {
+        "type": "string"
+      },
+      "verification": {
+        "properties": {
+          "payload": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "signature": {
+            "type": "string"
+          },
+          "verified": {
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      }
+    },
+    "type": "object"
+  }
 }

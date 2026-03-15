@@ -16,6 +16,10 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
+type ListCodeScanningAlertsResult struct {
+	Alerts []*github.Alert `json:"alerts"`
+}
+
 func GetCodeScanningAlert(t translations.TranslationHelperFunc) inventory.ServerTool {
 	return NewTool(
 		ToolsetMetadataCodeSecurity,
@@ -44,9 +48,78 @@ func GetCodeScanningAlert(t translations.TranslationHelperFunc) inventory.Server
 				},
 				Required: []string{"owner", "repo", "alertNumber"},
 			},
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"number":           {Type: "integer"},
+					"repository":       {Type: "object"},
+					"rule_id":          {Type: "string"},
+					"rule_severity":    {Type: "string"},
+					"rule_description": {Type: "string"},
+					"rule": {
+						Type: "object",
+						Properties: map[string]*jsonschema.Schema{
+							"id":                      {Type: "string"},
+							"severity":                {Type: "string"},
+							"description":             {Type: "string"},
+							"name":                    {Type: "string"},
+							"security_severity_level": {Type: "string"},
+							"full_description":        {Type: "string"},
+							"tags":                    {Type: "array", Items: &jsonschema.Schema{Type: "string"}},
+							"help":                    {Type: "string"},
+						},
+					},
+					"tool": {
+						Type: "object",
+						Properties: map[string]*jsonschema.Schema{
+							"name":    {Type: "string"},
+							"guid":    {Type: "string"},
+							"version": {Type: "string"},
+						},
+					},
+					"created_at": {Type: "string"},
+					"updated_at": {Type: "string"},
+					"fixed_at":   {Type: "string"},
+					"state":      {Type: "string"},
+					"closed_by":  UserSchema(),
+					"closed_at":  {Type: "string"},
+					"url":        {Type: "string"},
+					"html_url":   {Type: "string"},
+					"most_recent_instance": {
+						Type: "object",
+						Properties: map[string]*jsonschema.Schema{
+							"ref":          {Type: "string"},
+							"analysis_key": {Type: "string"},
+							"category":     {Type: "string"},
+							"environment":  {Type: "string"},
+							"state":        {Type: "string"},
+							"commit_sha":   {Type: "string"},
+							"message":      {Type: "object", Properties: map[string]*jsonschema.Schema{"text": {Type: "string"}}},
+							"location": {
+								Type: "object",
+								Properties: map[string]*jsonschema.Schema{
+									"path":         {Type: "string"},
+									"start_line":   {Type: "integer"},
+									"end_line":     {Type: "integer"},
+									"start_column": {Type: "integer"},
+									"end_column":   {Type: "integer"},
+								},
+							},
+							"html_url":        {Type: "string"},
+							"classifications": {Type: "array", Items: &jsonschema.Schema{Type: "string"}},
+						},
+					},
+					"instances":         {Type: "array", Items: &jsonschema.Schema{Type: "object"}},
+					"dismissed_by":      UserSchema(),
+					"dismissed_at":      {Type: "string"},
+					"dismissed_reason":  {Type: "string"},
+					"dismissed_comment": {Type: "string"},
+					"instances_url":     {Type: "string"},
+				},
+			},
 		},
 		[]scopes.Scope{scopes.SecurityEvents},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *github.Alert, error) {
 			owner, err := RequiredParam[string](args, "owner")
 			if err != nil {
 				return utils.NewToolResultError(err.Error()), nil, nil
@@ -88,7 +161,7 @@ func GetCodeScanningAlert(t translations.TranslationHelperFunc) inventory.Server
 				return utils.NewToolResultErrorFromErr("failed to marshal alert", err), nil, nil
 			}
 
-			return utils.NewToolResultText(string(r)), nil, nil
+			return utils.NewToolResultText(string(r)), alert, nil
 		},
 	)
 }
@@ -136,9 +209,86 @@ func ListCodeScanningAlerts(t translations.TranslationHelperFunc) inventory.Serv
 				},
 				Required: []string{"owner", "repo"},
 			},
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"alerts": {
+						Type: "array",
+						Items: &jsonschema.Schema{
+							Type: "object",
+							Properties: map[string]*jsonschema.Schema{
+								"number":           {Type: "integer"},
+								"repository":       {Type: "object"},
+								"rule_id":          {Type: "string"},
+								"rule_severity":    {Type: "string"},
+								"rule_description": {Type: "string"},
+								"rule": {
+									Type: "object",
+									Properties: map[string]*jsonschema.Schema{
+										"id":                      {Type: "string"},
+										"severity":                {Type: "string"},
+										"description":             {Type: "string"},
+										"name":                    {Type: "string"},
+										"security_severity_level": {Type: "string"},
+										"full_description":        {Type: "string"},
+										"tags":                    {Type: "array", Items: &jsonschema.Schema{Type: "string"}},
+										"help":                    {Type: "string"},
+									},
+								},
+								"tool": {
+									Type: "object",
+									Properties: map[string]*jsonschema.Schema{
+										"name":    {Type: "string"},
+										"guid":    {Type: "string"},
+										"version": {Type: "string"},
+									},
+								},
+								"created_at": {Type: "string"},
+								"updated_at": {Type: "string"},
+								"fixed_at":   {Type: "string"},
+								"state":      {Type: "string"},
+								"closed_by":  UserSchema(),
+								"closed_at":  {Type: "string"},
+								"url":        {Type: "string"},
+								"html_url":   {Type: "string"},
+								"most_recent_instance": {
+									Type: "object",
+									Properties: map[string]*jsonschema.Schema{
+										"ref":          {Type: "string"},
+										"analysis_key": {Type: "string"},
+										"category":     {Type: "string"},
+										"environment":  {Type: "string"},
+										"state":        {Type: "string"},
+										"commit_sha":   {Type: "string"},
+										"message":      {Type: "object", Properties: map[string]*jsonschema.Schema{"text": {Type: "string"}}},
+										"location": {
+											Type: "object",
+											Properties: map[string]*jsonschema.Schema{
+												"path":         {Type: "string"},
+												"start_line":   {Type: "integer"},
+												"end_line":     {Type: "integer"},
+												"start_column": {Type: "integer"},
+												"end_column":   {Type: "integer"},
+											},
+										},
+										"html_url":        {Type: "string"},
+										"classifications": {Type: "array", Items: &jsonschema.Schema{Type: "string"}},
+									},
+								},
+								"instances":         {Type: "array", Items: &jsonschema.Schema{Type: "object"}},
+								"dismissed_by":      UserSchema(),
+								"dismissed_at":      {Type: "string"},
+								"dismissed_reason":  {Type: "string"},
+								"dismissed_comment": {Type: "string"},
+								"instances_url":     {Type: "string"},
+							},
+						},
+					},
+				},
+			},
 		},
 		[]scopes.Scope{scopes.SecurityEvents},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *ListCodeScanningAlertsResult, error) {
 			owner, err := RequiredParam[string](args, "owner")
 			if err != nil {
 				return utils.NewToolResultError(err.Error()), nil, nil
@@ -191,7 +341,7 @@ func ListCodeScanningAlerts(t translations.TranslationHelperFunc) inventory.Serv
 				return utils.NewToolResultErrorFromErr("failed to marshal alerts", err), nil, nil
 			}
 
-			return utils.NewToolResultText(string(r)), nil, nil
+			return utils.NewToolResultText(string(r)), &ListCodeScanningAlertsResult{Alerts: alerts}, nil
 		},
 	)
 }

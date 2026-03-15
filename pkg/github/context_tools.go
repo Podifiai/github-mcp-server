@@ -54,6 +54,37 @@ func GetMe(t translations.TranslationHelperFunc) inventory.ServerTool {
 			// Use json.RawMessage to ensure "properties" is included even when empty.
 			// OpenAI strict mode requires the properties field to be present.
 			InputSchema: json.RawMessage(`{"type":"object","properties":{}}`),
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"login":       {Type: "string"},
+					"id":          {Type: "integer"},
+					"profile_url": {Type: "string"},
+					"avatar_url":  {Type: "string"},
+					"details": {
+						Type: "object",
+						Properties: map[string]*jsonschema.Schema{
+							"name":                {Type: "string"},
+							"company":             {Type: "string"},
+							"blog":                {Type: "string"},
+							"location":            {Type: "string"},
+							"email":               {Type: "string"},
+							"hireable":            {Type: "boolean"},
+							"bio":                 {Type: "string"},
+							"twitter_username":    {Type: "string"},
+							"public_repos":        {Type: "integer"},
+							"public_gists":        {Type: "integer"},
+							"followers":           {Type: "integer"},
+							"following":           {Type: "integer"},
+							"created_at":          {Type: "string"},
+							"updated_at":          {Type: "string"},
+							"private_gists":       {Type: "integer"},
+							"total_private_repos": {Type: "integer"},
+							"owned_private_repos": {Type: "integer"},
+						},
+					},
+				},
+			},
 			Meta: mcp.Meta{
 				"ui": map[string]any{
 					"resourceUri": GetMeUIResourceURI,
@@ -61,7 +92,7 @@ func GetMe(t translations.TranslationHelperFunc) inventory.ServerTool {
 			},
 		},
 		nil,
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, _ map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, _ map[string]any) (*mcp.CallToolResult, *MinimalUser, error) {
 			client, err := deps.GetClient(ctx)
 			if err != nil {
 				return utils.NewToolResultErrorFromErr("failed to get GitHub client", err), nil, nil
@@ -77,7 +108,7 @@ func GetMe(t translations.TranslationHelperFunc) inventory.ServerTool {
 			}
 
 			// Create minimal user representation instead of returning full user object
-			minimalUser := MinimalUser{
+			minimalUser := &MinimalUser{
 				Login:      user.GetLogin(),
 				ID:         user.GetID(),
 				ProfileURL: user.GetHTMLURL(),
@@ -103,7 +134,7 @@ func GetMe(t translations.TranslationHelperFunc) inventory.ServerTool {
 				},
 			}
 
-			return MarshalledTextResult(minimalUser), nil, nil
+			return MarshalledTextResult(minimalUser), minimalUser, nil
 		},
 	)
 }
@@ -117,6 +148,16 @@ type TeamInfo struct {
 type OrganizationTeams struct {
 	Org   string     `json:"org"`
 	Teams []TeamInfo `json:"teams"`
+}
+
+// GetTeamsResult wraps the slice return for structured content output schema compatibility.
+type GetTeamsResult struct {
+	Organizations []OrganizationTeams `json:"organizations"`
+}
+
+// GetTeamMembersResult wraps the slice return for structured content output schema compatibility.
+type GetTeamMembersResult struct {
+	Members []string `json:"members"`
 }
 
 func GetTeams(t translations.TranslationHelperFunc) inventory.ServerTool {
@@ -138,9 +179,34 @@ func GetTeams(t translations.TranslationHelperFunc) inventory.ServerTool {
 					},
 				},
 			},
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"organizations": {
+						Type: "array",
+						Items: &jsonschema.Schema{
+							Type: "object",
+							Properties: map[string]*jsonschema.Schema{
+								"org": {Type: "string"},
+								"teams": {
+									Type: "array",
+									Items: &jsonschema.Schema{
+										Type: "object",
+										Properties: map[string]*jsonschema.Schema{
+											"name":        {Type: "string"},
+											"slug":        {Type: "string"},
+											"description": {Type: "string"},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
 		},
 		[]scopes.Scope{scopes.ReadOrg},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *GetTeamsResult, error) {
 			user, err := OptionalParam[string](args, "user")
 			if err != nil {
 				return utils.NewToolResultError(err.Error()), nil, nil
@@ -212,7 +278,7 @@ func GetTeams(t translations.TranslationHelperFunc) inventory.ServerTool {
 				organizations = append(organizations, orgTeams)
 			}
 
-			return MarshalledTextResult(organizations), nil, nil
+			return MarshalledTextResult(organizations), &GetTeamsResult{Organizations: organizations}, nil
 		},
 	)
 }
@@ -241,9 +307,18 @@ func GetTeamMembers(t translations.TranslationHelperFunc) inventory.ServerTool {
 				},
 				Required: []string{"org", "team_slug"},
 			},
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"members": {
+						Type:  "array",
+						Items: &jsonschema.Schema{Type: "string"},
+					},
+				},
+			},
 		},
 		[]scopes.Scope{scopes.ReadOrg},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *GetTeamMembersResult, error) {
 			org, err := RequiredParam[string](args, "org")
 			if err != nil {
 				return utils.NewToolResultError(err.Error()), nil, nil
@@ -283,7 +358,7 @@ func GetTeamMembers(t translations.TranslationHelperFunc) inventory.ServerTool {
 				members = append(members, string(member.Login))
 			}
 
-			return MarshalledTextResult(members), nil, nil
+			return MarshalledTextResult(members), &GetTeamMembersResult{Members: members}, nil
 		},
 	)
 }

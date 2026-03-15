@@ -49,5 +49,37 @@
     ],
     "type": "object"
   },
-  "name": "actions_run_trigger"
+  "name": "actions_run_trigger",
+  "outputSchema": {
+    "properties": {
+      "inputs": {
+        "type": "object"
+      },
+      "message": {
+        "type": "string"
+      },
+      "ref": {
+        "type": "string"
+      },
+      "run_id": {
+        "type": "integer"
+      },
+      "status": {
+        "type": "string"
+      },
+      "status_code": {
+        "type": "integer"
+      },
+      "workflow_id": {
+        "type": "string"
+      },
+      "workflow_type": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "message"
+    ],
+    "type": "object"
+  }
 }

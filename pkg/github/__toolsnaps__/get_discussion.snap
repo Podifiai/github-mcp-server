@@ -26,5 +26,36 @@
     ],
     "type": "object"
   },
-  "name": "get_discussion"
+  "name": "get_discussion",
+  "outputSchema": {
+    "properties": {
+      "body": {
+        "type": "string"
+      },
+      "category": {
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "closed": {
+        "type": "boolean"
+      },
+      "isAnswered": {
+        "type": "boolean"
+      },
+      "number": {
+        "type": "integer"
+      },
+      "title": {
+        "type": "string"
+      },
+      "url": {
+        "type": "string"
+      }
+    },
+    "type": "object"
+  }
 }

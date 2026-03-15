@@ -17,6 +17,10 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
+type ListDependabotAlertsResult struct {
+	Alerts []*github.DependabotAlert `json:"alerts"`
+}
+
 func GetDependabotAlert(t translations.TranslationHelperFunc) inventory.ServerTool {
 	return NewTool(
 		ToolsetMetadataDependabot,
@@ -45,9 +49,117 @@ func GetDependabotAlert(t translations.TranslationHelperFunc) inventory.ServerTo
 				},
 				Required: []string{"owner", "repo", "alertNumber"},
 			},
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"number": {Type: "integer"},
+					"state":  {Type: "string"},
+					"dependency": {
+						Type: "object",
+						Properties: map[string]*jsonschema.Schema{
+							"package": {
+								Type: "object",
+								Properties: map[string]*jsonschema.Schema{
+									"ecosystem": {Type: "string"},
+									"name":      {Type: "string"},
+								},
+							},
+							"manifest_path": {Type: "string"},
+							"scope":         {Type: "string"},
+						},
+					},
+					"security_advisory": {
+						Type: "object",
+						Properties: map[string]*jsonschema.Schema{
+							"ghsa_id":     {Type: "string"},
+							"cve_id":      {Type: "string"},
+							"summary":     {Type: "string"},
+							"description": {Type: "string"},
+							"vulnerabilities": {
+								Type: "array",
+								Items: &jsonschema.Schema{
+									Type: "object",
+									Properties: map[string]*jsonschema.Schema{
+										"package": {
+											Type: "object",
+											Properties: map[string]*jsonschema.Schema{
+												"ecosystem": {Type: "string"},
+												"name":      {Type: "string"},
+											},
+										},
+										"severity":                 {Type: "string"},
+										"vulnerable_version_range": {Type: "string"},
+										"first_patched_version":    {Type: "object"},
+										"patched_versions":         {Type: "string"},
+										"vulnerable_functions":     {Type: "array", Items: &jsonschema.Schema{Type: "string"}},
+									},
+								},
+							},
+							"severity": {Type: "string"},
+							"cvss": {
+								Type: "object",
+								Properties: map[string]*jsonschema.Schema{
+									"score":         {Type: "number"},
+									"vector_string": {Type: "string"},
+								},
+							},
+							"cwes": {
+								Type: "array",
+								Items: &jsonschema.Schema{
+									Type: "object",
+									Properties: map[string]*jsonschema.Schema{
+										"cwe_id": {Type: "string"},
+										"name":   {Type: "string"},
+									},
+								},
+							},
+							"epss": {
+								Type: "object",
+								Properties: map[string]*jsonschema.Schema{
+									"percentage": {Type: "number"},
+									"percentile": {Type: "number"},
+								},
+							},
+							"identifiers":  {Type: "array", Items: &jsonschema.Schema{Type: "object"}},
+							"references":   {Type: "array", Items: &jsonschema.Schema{Type: "object"}},
+							"published_at": {Type: "string"},
+							"updated_at":   {Type: "string"},
+							"withdrawn_at": {Type: "string"},
+						},
+					},
+					"security_vulnerability": {
+						Type: "object",
+						Properties: map[string]*jsonschema.Schema{
+							"package": {
+								Type: "object",
+								Properties: map[string]*jsonschema.Schema{
+									"ecosystem": {Type: "string"},
+									"name":      {Type: "string"},
+								},
+							},
+							"severity":                 {Type: "string"},
+							"vulnerable_version_range": {Type: "string"},
+							"first_patched_version":    {Type: "object"},
+							"patched_versions":         {Type: "string"},
+							"vulnerable_functions":     {Type: "array", Items: &jsonschema.Schema{Type: "string"}},
+						},
+					},
+					"url":               {Type: "string"},
+					"html_url":          {Type: "string"},
+					"created_at":        {Type: "string"},
+					"updated_at":        {Type: "string"},
+					"dismissed_at":      {Type: "string"},
+					"dismissed_by":      UserSchema(),
+					"dismissed_reason":  {Type: "string"},
+					"dismissed_comment": {Type: "string"},
+					"fixed_at":          {Type: "string"},
+					"auto_dismissed_at": {Type: "string"},
+					"repository":        {Type: "object"},
+				},
+			},
 		},
 		[]scopes.Scope{scopes.SecurityEvents},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *github.DependabotAlert, error) {
 			owner, err := RequiredParam[string](args, "owner")
 			if err != nil {
 				return utils.NewToolResultError(err.Error()), nil, nil
@@ -89,7 +201,7 @@ func GetDependabotAlert(t translations.TranslationHelperFunc) inventory.ServerTo
 				return utils.NewToolResultErrorFromErr("failed to marshal alert", err), nil, err
 			}
 
-			return utils.NewToolResultText(string(r)), nil, nil
+			return utils.NewToolResultText(string(r)), alert, nil
 		},
 	)
 }
@@ -129,9 +241,125 @@ func ListDependabotAlerts(t translations.TranslationHelperFunc) inventory.Server
 				},
 				Required: []string{"owner", "repo"},
 			},
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"alerts": {
+						Type: "array",
+						Items: &jsonschema.Schema{
+							Type: "object",
+							Properties: map[string]*jsonschema.Schema{
+								"number": {Type: "integer"},
+								"state":  {Type: "string"},
+								"dependency": {
+									Type: "object",
+									Properties: map[string]*jsonschema.Schema{
+										"package": {
+											Type: "object",
+											Properties: map[string]*jsonschema.Schema{
+												"ecosystem": {Type: "string"},
+												"name":      {Type: "string"},
+											},
+										},
+										"manifest_path": {Type: "string"},
+										"scope":         {Type: "string"},
+									},
+								},
+								"security_advisory": {
+									Type: "object",
+									Properties: map[string]*jsonschema.Schema{
+										"ghsa_id":     {Type: "string"},
+										"cve_id":      {Type: "string"},
+										"summary":     {Type: "string"},
+										"description": {Type: "string"},
+										"vulnerabilities": {
+											Type: "array",
+											Items: &jsonschema.Schema{
+												Type: "object",
+												Properties: map[string]*jsonschema.Schema{
+													"package": {
+														Type: "object",
+														Properties: map[string]*jsonschema.Schema{
+															"ecosystem": {Type: "string"},
+															"name":      {Type: "string"},
+														},
+													},
+													"severity":                 {Type: "string"},
+													"vulnerable_version_range": {Type: "string"},
+													"first_patched_version":    {Type: "object"},
+													"patched_versions":         {Type: "string"},
+													"vulnerable_functions":     {Type: "array", Items: &jsonschema.Schema{Type: "string"}},
+												},
+											},
+										},
+										"severity": {Type: "string"},
+										"cvss": {
+											Type: "object",
+											Properties: map[string]*jsonschema.Schema{
+												"score":         {Type: "number"},
+												"vector_string": {Type: "string"},
+											},
+										},
+										"cwes": {
+											Type: "array",
+											Items: &jsonschema.Schema{
+												Type: "object",
+												Properties: map[string]*jsonschema.Schema{
+													"cwe_id": {Type: "string"},
+													"name":   {Type: "string"},
+												},
+											},
+										},
+										"epss": {
+											Type: "object",
+											Properties: map[string]*jsonschema.Schema{
+												"percentage": {Type: "number"},
+												"percentile": {Type: "number"},
+											},
+										},
+										"identifiers":  {Type: "array", Items: &jsonschema.Schema{Type: "object"}},
+										"references":   {Type: "array", Items: &jsonschema.Schema{Type: "object"}},
+										"published_at": {Type: "string"},
+										"updated_at":   {Type: "string"},
+										"withdrawn_at": {Type: "string"},
+									},
+								},
+								"security_vulnerability": {
+									Type: "object",
+									Properties: map[string]*jsonschema.Schema{
+										"package": {
+											Type: "object",
+											Properties: map[string]*jsonschema.Schema{
+												"ecosystem": {Type: "string"},
+												"name":      {Type: "string"},
+											},
+										},
+										"severity":                 {Type: "string"},
+										"vulnerable_version_range": {Type: "string"},
+										"first_patched_version":    {Type: "object"},
+										"patched_versions":         {Type: "string"},
+										"vulnerable_functions":     {Type: "array", Items: &jsonschema.Schema{Type: "string"}},
+									},
+								},
+								"url":               {Type: "string"},
+								"html_url":          {Type: "string"},
+								"created_at":        {Type: "string"},
+								"updated_at":        {Type: "string"},
+								"dismissed_at":      {Type: "string"},
+								"dismissed_by":      UserSchema(),
+								"dismissed_reason":  {Type: "string"},
+								"dismissed_comment": {Type: "string"},
+								"fixed_at":          {Type: "string"},
+								"auto_dismissed_at": {Type: "string"},
+								"repository":        {Type: "object"},
+							},
+						},
+					},
+				},
+			},
 		},
 		[]scopes.Scope{scopes.SecurityEvents},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *ListDependabotAlertsResult, error) {
 			owner, err := RequiredParam[string](args, "owner")
 			if err != nil {
 				return utils.NewToolResultError(err.Error()), nil, nil
@@ -180,7 +408,7 @@ func ListDependabotAlerts(t translations.TranslationHelperFunc) inventory.Server
 				return utils.NewToolResultErrorFromErr("failed to marshal alerts", err), nil, err
 			}
 
-			return utils.NewToolResultText(string(r)), nil, nil
+			return utils.NewToolResultText(string(r)), &ListDependabotAlertsResult{Alerts: alerts}, nil
 		},
 	)
 }

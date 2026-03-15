@@ -58,5 +58,13 @@
     ],
     "type": "object"
   },
-  "name": "pull_request_review_write"
+  "name": "pull_request_review_write",
+  "outputSchema": {
+    "properties": {
+      "message": {
+        "type": "string"
+      }
+    },
+    "type": "object"
+  }
 }

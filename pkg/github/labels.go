@@ -16,6 +16,27 @@ import (
 	"github.com/shurcooL/githubv4"
 )
 
+// LabelResult represents a single label
+type LabelResult struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Color       string `json:"color"`
+	Description string `json:"description"`
+}
+
+// ListLabelsResult wraps the slice return for structured content output schema compatibility
+type ListLabelsResult struct {
+	Labels     []LabelResult `json:"labels"`
+	TotalCount int           `json:"total_count"`
+}
+
+// LabelWriteResult represents the result of a label write operation
+type LabelWriteResult struct {
+	Name    string `json:"name,omitempty"`
+	Color   string `json:"color,omitempty"`
+	Message string `json:"message"`
+}
+
 // GetLabel retrieves a specific label by name from a GitHub repository
 func GetLabel(t translations.TranslationHelperFunc) inventory.ServerTool {
 	return NewTool(
@@ -45,9 +66,18 @@ func GetLabel(t translations.TranslationHelperFunc) inventory.ServerTool {
 				},
 				Required: []string{"owner", "repo", "name"},
 			},
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"id":          {Type: "string"},
+					"name":        {Type: "string"},
+					"color":       {Type: "string"},
+					"description": {Type: "string"},
+				},
+			},
 		},
 		[]scopes.Scope{scopes.Repo},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *LabelResult, error) {
 			owner, err := RequiredParam[string](args, "owner")
 			if err != nil {
 				return utils.NewToolResultError(err.Error()), nil, nil
@@ -93,19 +123,19 @@ func GetLabel(t translations.TranslationHelperFunc) inventory.ServerTool {
 				return utils.NewToolResultError(fmt.Sprintf("label '%s' not found in %s/%s", name, owner, repo)), nil, nil
 			}
 
-			label := map[string]any{
-				"id":          fmt.Sprintf("%v", query.Repository.Label.ID),
-				"name":        string(query.Repository.Label.Name),
-				"color":       string(query.Repository.Label.Color),
-				"description": string(query.Repository.Label.Description),
+			result := &LabelResult{
+				ID:          fmt.Sprintf("%v", query.Repository.Label.ID),
+				Name:        string(query.Repository.Label.Name),
+				Color:       string(query.Repository.Label.Color),
+				Description: string(query.Repository.Label.Description),
 			}
 
-			out, err := json.Marshal(label)
+			out, err := json.Marshal(result)
 			if err != nil {
 				return nil, nil, fmt.Errorf("failed to marshal label: %w", err)
 			}
 
-			return utils.NewToolResultText(string(out)), nil, nil
+			return utils.NewToolResultText(string(out)), result, nil
 		},
 	)
 }
@@ -143,9 +173,27 @@ func ListLabels(t translations.TranslationHelperFunc) inventory.ServerTool {
 				},
 				Required: []string{"owner", "repo"},
 			},
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"labels": {
+						Type: "array",
+						Items: &jsonschema.Schema{
+							Type: "object",
+							Properties: map[string]*jsonschema.Schema{
+								"id":          {Type: "string"},
+								"name":        {Type: "string"},
+								"color":       {Type: "string"},
+								"description": {Type: "string"},
+							},
+						},
+					},
+					"total_count": {Type: "integer"},
+				},
+			},
 		},
 		[]scopes.Scope{scopes.Repo},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *ListLabelsResult, error) {
 			owner, err := RequiredParam[string](args, "owner")
 			if err != nil {
 				return utils.NewToolResultError(err.Error()), nil, nil
@@ -184,27 +232,27 @@ func ListLabels(t translations.TranslationHelperFunc) inventory.ServerTool {
 				return ghErrors.NewGitHubGraphQLErrorResponse(ctx, "Failed to list labels", err), nil, nil
 			}
 
-			labels := make([]map[string]any, len(query.Repository.Labels.Nodes))
+			labels := make([]LabelResult, len(query.Repository.Labels.Nodes))
 			for i, labelNode := range query.Repository.Labels.Nodes {
-				labels[i] = map[string]any{
-					"id":          fmt.Sprintf("%v", labelNode.ID),
-					"name":        string(labelNode.Name),
-					"color":       string(labelNode.Color),
-					"description": string(labelNode.Description),
+				labels[i] = LabelResult{
+					ID:          fmt.Sprintf("%v", labelNode.ID),
+					Name:        string(labelNode.Name),
+					Color:       string(labelNode.Color),
+					Description: string(labelNode.Description),
 				}
 			}
 
-			response := map[string]any{
-				"labels":     labels,
-				"totalCount": int(query.Repository.Labels.TotalCount),
+			result := &ListLabelsResult{
+				Labels:     labels,
+				TotalCount: int(query.Repository.Labels.TotalCount),
 			}
 
-			out, err := json.Marshal(response)
+			out, err := json.Marshal(result)
 			if err != nil {
 				return nil, nil, fmt.Errorf("failed to marshal labels: %w", err)
 			}
 
-			return utils.NewToolResultText(string(out)), nil, nil
+			return utils.NewToolResultText(string(out)), result, nil
 		},
 	)
 }
@@ -255,9 +303,17 @@ func LabelWrite(t translations.TranslationHelperFunc) inventory.ServerTool {
 				},
 				Required: []string{"method", "owner", "repo", "name"},
 			},
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"name":    {Type: "string"},
+					"color":   {Type: "string"},
+					"message": {Type: "string"},
+				},
+			},
 		},
 		[]scopes.Scope{scopes.Repo},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *LabelWriteResult, error) {
 			// Get and validate required parameters
 			method, err := RequiredParam[string](args, "method")
 			if err != nil {
@@ -326,7 +382,12 @@ func LabelWrite(t translations.TranslationHelperFunc) inventory.ServerTool {
 					return ghErrors.NewGitHubGraphQLErrorResponse(ctx, "Failed to create label", err), nil, nil
 				}
 
-				return utils.NewToolResultText(fmt.Sprintf("label '%s' created successfully", mutation.CreateLabel.Label.Name)), nil, nil
+				result := &LabelWriteResult{
+					Name:    string(mutation.CreateLabel.Label.Name),
+					Color:   color,
+					Message: fmt.Sprintf("label '%s' created successfully", mutation.CreateLabel.Label.Name),
+				}
+				return utils.NewToolResultText(result.Message), result, nil
 
 			case "update":
 				// Validate required params for update
@@ -369,7 +430,12 @@ func LabelWrite(t translations.TranslationHelperFunc) inventory.ServerTool {
 					return ghErrors.NewGitHubGraphQLErrorResponse(ctx, "Failed to update label", err), nil, nil
 				}
 
-				return utils.NewToolResultText(fmt.Sprintf("label '%s' updated successfully", mutation.UpdateLabel.Label.Name)), nil, nil
+				result := &LabelWriteResult{
+					Name:    string(mutation.UpdateLabel.Label.Name),
+					Color:   color,
+					Message: fmt.Sprintf("label '%s' updated successfully", mutation.UpdateLabel.Label.Name),
+				}
+				return utils.NewToolResultText(result.Message), result, nil
 
 			case "delete":
 				// Get the label ID
@@ -392,7 +458,11 @@ func LabelWrite(t translations.TranslationHelperFunc) inventory.ServerTool {
 					return ghErrors.NewGitHubGraphQLErrorResponse(ctx, "Failed to delete label", err), nil, nil
 				}
 
-				return utils.NewToolResultText(fmt.Sprintf("label '%s' deleted successfully", name)), nil, nil
+				result := &LabelWriteResult{
+					Name:    name,
+					Message: fmt.Sprintf("label '%s' deleted successfully", name),
+				}
+				return utils.NewToolResultText(result.Message), result, nil
 
 			default:
 				return utils.NewToolResultError(fmt.Sprintf("unknown method: %s. Supported methods are: create, update, delete", method)), nil, nil

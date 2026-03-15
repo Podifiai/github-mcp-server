@@ -39,5 +39,94 @@
     ],
     "type": "object"
   },
-  "name": "actions_get"
+  "name": "actions_get",
+  "outputSchema": {
+    "properties": {
+      "artifact_download": {
+        "properties": {
+          "artifact_id": {
+            "type": "integer"
+          },
+          "download_url": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "logs_url": {
+        "properties": {
+          "logs_url": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "workflow": {
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "workflow_job": {
+        "properties": {
+          "conclusion": {
+            "type": "string"
+          },
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "workflow_run": {
+        "properties": {
+          "conclusion": {
+            "type": "string"
+          },
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "workflow_usage": {
+        "properties": {
+          "billable": {
+            "type": "object"
+          }
+        },
+        "type": "object"
+      }
+    },
+    "type": "object"
+  }
 }

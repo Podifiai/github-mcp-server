@@ -54,5 +54,19 @@
     ],
     "type": "object"
   },
-  "name": "merge_pull_request"
+  "name": "merge_pull_request",
+  "outputSchema": {
+    "properties": {
+      "merged": {
+        "type": "boolean"
+      },
+      "message": {
+        "type": "string"
+      },
+      "sha": {
+        "type": "string"
+      }
+    },
+    "type": "object"
+  }
 }

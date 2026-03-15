@@ -20,5 +20,16 @@
     ],
     "type": "object"
   },
-  "name": "unstar_repository"
+  "name": "unstar_repository",
+  "outputSchema": {
+    "properties": {
+      "message": {
+        "type": "string"
+      },
+      "success": {
+        "type": "boolean"
+      }
+    },
+    "type": "object"
+  }
 }

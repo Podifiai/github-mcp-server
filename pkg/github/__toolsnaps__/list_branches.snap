@@ -32,5 +32,27 @@
     ],
     "type": "object"
   },
-  "name": "list_branches"
+  "name": "list_branches",
+  "outputSchema": {
+    "properties": {
+      "branches": {
+        "items": {
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "protected": {
+              "type": "boolean"
+            },
+            "sha": {
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "type": "array"
+      }
+    },
+    "type": "object"
+  }
 }

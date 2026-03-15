@@ -67,6 +67,11 @@ type ServerConfig struct {
 	// ScopeChallenge indicates if we should return OAuth scope challenges, and if we should perform
 	// tool filtering based on token scopes.
 	ScopeChallenge bool
+
+	// StructuredContent enables structured content and output schemas in tool results.
+	// When enabled, tools are registered using the generic mcp.AddTool[In, Out] path,
+	// which populates OutputSchema and StructuredContent in tool results.
+	StructuredContent bool
 }
 
 func RunHTTPServer(cfg ServerConfig) error {

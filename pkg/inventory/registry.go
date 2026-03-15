@@ -60,6 +60,9 @@ type Inventory struct {
 	unrecognizedToolsets []string
 	// server instructions hold high-level instructions for agents to use the server effectively
 	instructions string
+	// structuredContent when true, tools are registered using the generic mcp.AddTool[In, Out]
+	// path which enables OutputSchema and StructuredContent in tool results.
+	structuredContent bool
 }
 
 // UnrecognizedToolsets returns toolset IDs that were passed to WithToolsets but don't
@@ -114,6 +117,7 @@ func (r *Inventory) ForMCPRequest(method string, itemName string) *Inventory {
 		featureChecker:       r.featureChecker,
 		filters:              r.filters, // shared, not modified
 		unrecognizedToolsets: r.unrecognizedToolsets,
+		structuredContent:    r.structuredContent,
 	}
 
 	// Helper to clear all item types
@@ -172,8 +176,13 @@ func (r *Inventory) ToolsetDescriptions() map[ToolsetID]string {
 // The context is used for feature flag evaluation.
 func (r *Inventory) RegisterTools(ctx context.Context, s *mcp.Server, deps any) {
 	for _, tool := range r.AvailableTools(ctx) {
-		tool.RegisterFunc(s, deps)
+		tool.RegisterFunc(s, deps, r.structuredContent)
 	}
+}
+
+// StructuredContent returns whether structured content mode is enabled.
+func (r *Inventory) StructuredContent() bool {
+	return r.structuredContent
 }
 
 // RegisterResourceTemplates registers all available resource templates with the server.

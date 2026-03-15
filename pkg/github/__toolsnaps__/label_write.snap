@@ -47,5 +47,19 @@
     ],
     "type": "object"
   },
-  "name": "label_write"
+  "name": "label_write",
+  "outputSchema": {
+    "properties": {
+      "color": {
+        "type": "string"
+      },
+      "message": {
+        "type": "string"
+      },
+      "name": {
+        "type": "string"
+      }
+    },
+    "type": "object"
+  }
 }

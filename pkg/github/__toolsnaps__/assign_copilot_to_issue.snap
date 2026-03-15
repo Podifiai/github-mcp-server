@@ -46,5 +46,45 @@
     ],
     "type": "object"
   },
-  "name": "assign_copilot_to_issue"
+  "name": "assign_copilot_to_issue",
+  "outputSchema": {
+    "properties": {
+      "issue_number": {
+        "type": "integer"
+      },
+      "issue_url": {
+        "type": "string"
+      },
+      "message": {
+        "type": "string"
+      },
+      "note": {
+        "type": "string"
+      },
+      "owner": {
+        "type": "string"
+      },
+      "pull_request": {
+        "properties": {
+          "number": {
+            "type": "integer"
+          },
+          "state": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "repo": {
+        "type": "string"
+      }
+    },
+    "type": "object"
+  }
 }

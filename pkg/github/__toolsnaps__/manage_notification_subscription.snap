@@ -25,5 +25,19 @@
     ],
     "type": "object"
   },
-  "name": "manage_notification_subscription"
+  "name": "manage_notification_subscription",
+  "outputSchema": {
+    "properties": {
+      "ignored": {
+        "type": "boolean"
+      },
+      "message": {
+        "type": "string"
+      },
+      "subscribed": {
+        "type": "boolean"
+      }
+    },
+    "type": "object"
+  }
 }

@@ -16,5 +16,63 @@
     ],
     "type": "object"
   },
-  "name": "get_gist"
+  "name": "get_gist",
+  "outputSchema": {
+    "properties": {
+      "comments": {
+        "type": "integer"
+      },
+      "created_at": {
+        "type": "string"
+      },
+      "description": {
+        "type": "string"
+      },
+      "files": {
+        "type": "object"
+      },
+      "git_pull_url": {
+        "type": "string"
+      },
+      "git_push_url": {
+        "type": "string"
+      },
+      "html_url": {
+        "type": "string"
+      },
+      "id": {
+        "type": "string"
+      },
+      "node_id": {
+        "type": "string"
+      },
+      "owner": {
+        "properties": {
+          "avatar_url": {
+            "type": "string"
+          },
+          "details": {
+            "type": "object"
+          },
+          "id": {
+            "type": "integer"
+          },
+          "login": {
+            "type": "string"
+          },
+          "profile_url": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "public": {
+        "type": "boolean"
+      },
+      "updated_at": {
+        "type": "string"
+      }
+    },
+    "type": "object"
+  }
 }

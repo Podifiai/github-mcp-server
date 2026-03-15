@@ -17,6 +17,24 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
+// SearchCodeResult represents the wrapper for code search results
+type SearchCodeResult struct {
+	TotalCount        int  `json:"total_count"`
+	IncompleteResults bool `json:"incomplete_results"`
+	Items             []struct {
+		Name       string `json:"name"`
+		Path       string `json:"path"`
+		SHA        string `json:"sha"`
+		HTMLURL    string `json:"html_url"`
+		Repository struct {
+			ID       int64  `json:"id"`
+			Name     string `json:"name"`
+			FullName string `json:"full_name"`
+			HTMLURL  string `json:"html_url"`
+		} `json:"repository"`
+	} `json:"items"`
+}
+
 // SearchRepositories creates a tool to search for GitHub repositories.
 func SearchRepositories(t translations.TranslationHelperFunc) inventory.ServerTool {
 	schema := &jsonschema.Schema{
@@ -56,9 +74,40 @@ func SearchRepositories(t translations.TranslationHelperFunc) inventory.ServerTo
 				ReadOnlyHint: true,
 			},
 			InputSchema: schema,
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"total_count":        {Type: "integer"},
+					"incomplete_results": {Type: "boolean"},
+					"items": {
+						Type: "array",
+						Items: &jsonschema.Schema{
+							Type: "object",
+							Properties: map[string]*jsonschema.Schema{
+								"id":                {Type: "integer"},
+								"name":              {Type: "string"},
+								"full_name":         {Type: "string"},
+								"description":       {Type: "string"},
+								"html_url":          {Type: "string"},
+								"language":          {Type: "string"},
+								"stargazers_count":  {Type: "integer"},
+								"forks_count":       {Type: "integer"},
+								"open_issues_count": {Type: "integer"},
+								"updated_at":        {Type: "string"},
+								"created_at":        {Type: "string"},
+								"topics":            {Type: "array", Items: &jsonschema.Schema{Type: "string"}},
+								"private":           {Type: "boolean"},
+								"fork":              {Type: "boolean"},
+								"archived":          {Type: "boolean"},
+								"default_branch":    {Type: "string"},
+							},
+						},
+					},
+				},
+			},
 		},
 		[]scopes.Scope{scopes.Repo},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *MinimalSearchRepositoriesResult, error) {
 			query, err := RequiredParam[string](args, "query")
 			if err != nil {
 				return utils.NewToolResultError(err.Error()), nil, nil
@@ -112,6 +161,7 @@ func SearchRepositories(t translations.TranslationHelperFunc) inventory.ServerTo
 
 			// Return either minimal or full response based on parameter
 			var r []byte
+			var outputResult *MinimalSearchRepositoriesResult
 			if minimalOutput {
 				minimalRepos := make([]MinimalRepository, 0, len(result.Repositories))
 				for _, repo := range result.Repositories {
@@ -144,13 +194,13 @@ func SearchRepositories(t translations.TranslationHelperFunc) inventory.ServerTo
 					minimalRepos = append(minimalRepos, minimalRepo)
 				}
 
-				minimalResult := &MinimalSearchRepositoriesResult{
+				outputResult = &MinimalSearchRepositoriesResult{
 					TotalCount:        result.GetTotal(),
 					IncompleteResults: result.GetIncompleteResults(),
 					Items:             minimalRepos,
 				}
 
-				r, err = json.Marshal(minimalResult)
+				r, err = json.Marshal(outputResult)
 				if err != nil {
 					return utils.NewToolResultErrorFromErr("failed to marshal minimal response", err), nil, nil
 				}
@@ -161,7 +211,7 @@ func SearchRepositories(t translations.TranslationHelperFunc) inventory.ServerTo
 				}
 			}
 
-			return utils.NewToolResultText(string(r)), nil, nil
+			return utils.NewToolResultText(string(r)), outputResult, nil
 		},
 	)
 }
@@ -199,9 +249,37 @@ func SearchCode(t translations.TranslationHelperFunc) inventory.ServerTool {
 				ReadOnlyHint: true,
 			},
 			InputSchema: schema,
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"total_count":        {Type: "integer"},
+					"incomplete_results": {Type: "boolean"},
+					"items": {
+						Type: "array",
+						Items: &jsonschema.Schema{
+							Type: "object",
+							Properties: map[string]*jsonschema.Schema{
+								"name":     {Type: "string"},
+								"path":     {Type: "string"},
+								"sha":      {Type: "string"},
+								"html_url": {Type: "string"},
+								"repository": {
+									Type: "object",
+									Properties: map[string]*jsonschema.Schema{
+										"id":        {Type: "integer"},
+										"name":      {Type: "string"},
+										"full_name": {Type: "string"},
+										"html_url":  {Type: "string"},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
 		},
 		[]scopes.Scope{scopes.Repo},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *SearchCodeResult, error) {
 			query, err := RequiredParam[string](args, "query")
 			if err != nil {
 				return utils.NewToolResultError(err.Error()), nil, nil
@@ -251,17 +329,48 @@ func SearchCode(t translations.TranslationHelperFunc) inventory.ServerTool {
 				return ghErrors.NewGitHubAPIStatusErrorResponse(ctx, "failed to search code", resp, body), nil, nil
 			}
 
-			r, err := json.Marshal(result)
+			// Convert to SearchCodeResult structure
+			output := &SearchCodeResult{
+				TotalCount:        result.GetTotal(),
+				IncompleteResults: result.GetIncompleteResults(),
+			}
+			output.Items = make([]struct {
+				Name       string `json:"name"`
+				Path       string `json:"path"`
+				SHA        string `json:"sha"`
+				HTMLURL    string `json:"html_url"`
+				Repository struct {
+					ID       int64  `json:"id"`
+					Name     string `json:"name"`
+					FullName string `json:"full_name"`
+					HTMLURL  string `json:"html_url"`
+				} `json:"repository"`
+			}, len(result.CodeResults))
+
+			for i, cr := range result.CodeResults {
+				output.Items[i].Name = cr.GetName()
+				output.Items[i].Path = cr.GetPath()
+				output.Items[i].SHA = cr.GetSHA()
+				output.Items[i].HTMLURL = cr.GetHTMLURL()
+				if cr.Repository != nil {
+					output.Items[i].Repository.ID = cr.Repository.GetID()
+					output.Items[i].Repository.Name = cr.Repository.GetName()
+					output.Items[i].Repository.FullName = cr.Repository.GetFullName()
+					output.Items[i].Repository.HTMLURL = cr.Repository.GetHTMLURL()
+				}
+			}
+
+			r, err := json.Marshal(output)
 			if err != nil {
 				return utils.NewToolResultErrorFromErr("failed to marshal response", err), nil, nil
 			}
 
-			return utils.NewToolResultText(string(r)), nil, nil
+			return utils.NewToolResultText(string(r)), output, nil
 		},
 	)
 }
 
-func userOrOrgHandler(ctx context.Context, accountType string, deps ToolDependencies, args map[string]any) (*mcp.CallToolResult, any, error) {
+func userOrOrgHandler(ctx context.Context, accountType string, deps ToolDependencies, args map[string]any) (*mcp.CallToolResult, *MinimalSearchUsersResult, error) {
 	query, err := RequiredParam[string](args, "query")
 	if err != nil {
 		return utils.NewToolResultError(err.Error()), nil, nil
@@ -344,7 +453,7 @@ func userOrOrgHandler(ctx context.Context, accountType string, deps ToolDependen
 	if err != nil {
 		return utils.NewToolResultErrorFromErr("failed to marshal response", err), nil, nil
 	}
-	return utils.NewToolResultText(string(r)), nil, nil
+	return utils.NewToolResultText(string(r)), minimalResp, nil
 }
 
 // SearchUsers creates a tool to search for GitHub users.
@@ -381,9 +490,20 @@ func SearchUsers(t translations.TranslationHelperFunc) inventory.ServerTool {
 				ReadOnlyHint: true,
 			},
 			InputSchema: schema,
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"total_count":        {Type: "integer"},
+					"incomplete_results": {Type: "boolean"},
+					"items": {
+						Type:  "array",
+						Items: MinimalUserSchema(),
+					},
+				},
+			},
 		},
 		[]scopes.Scope{scopes.Repo},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *MinimalSearchUsersResult, error) {
 			return userOrOrgHandler(ctx, "user", deps, args)
 		},
 	)
@@ -423,9 +543,20 @@ func SearchOrgs(t translations.TranslationHelperFunc) inventory.ServerTool {
 				ReadOnlyHint: true,
 			},
 			InputSchema: schema,
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"total_count":        {Type: "integer"},
+					"incomplete_results": {Type: "boolean"},
+					"items": {
+						Type:  "array",
+						Items: MinimalUserSchema(),
+					},
+				},
+			},
 		},
 		[]scopes.Scope{scopes.ReadOrg},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *MinimalSearchUsersResult, error) {
 			return userOrOrgHandler(ctx, "org", deps, args)
 		},
 	)
