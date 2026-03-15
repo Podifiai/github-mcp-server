@@ -49,6 +49,9 @@
             "archived": {
               "type": "boolean"
             },
+            "created_at": {
+              "type": "string"
+            },
             "default_branch": {
               "type": "string"
             },
@@ -84,6 +87,12 @@
             },
             "stargazers_count": {
               "type": "integer"
+            },
+            "topics": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
             },
             "updated_at": {
               "type": "string"

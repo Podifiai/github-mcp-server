@@ -63,13 +63,487 @@
   "name": "search_issues",
   "outputSchema": {
     "properties": {
-      "issues": {
+      "incomplete_results": {
+        "type": "boolean"
+      },
+      "items": {
         "items": {
           "properties": {
+            "active_lock_reason": {
+              "type": "string"
+            },
+            "assignee": {
+              "properties": {
+                "assignment": {
+                  "type": "string"
+                },
+                "avatar_url": {
+                  "type": "string"
+                },
+                "bio": {
+                  "type": "string"
+                },
+                "blog": {
+                  "type": "string"
+                },
+                "collaborators": {
+                  "type": "integer"
+                },
+                "company": {
+                  "type": "string"
+                },
+                "created_at": {
+                  "type": "string"
+                },
+                "disk_usage": {
+                  "type": "integer"
+                },
+                "email": {
+                  "type": "string"
+                },
+                "events_url": {
+                  "type": "string"
+                },
+                "followers": {
+                  "type": "integer"
+                },
+                "followers_url": {
+                  "type": "string"
+                },
+                "following": {
+                  "type": "integer"
+                },
+                "following_url": {
+                  "type": "string"
+                },
+                "gists_url": {
+                  "type": "string"
+                },
+                "gravatar_id": {
+                  "type": "string"
+                },
+                "hireable": {
+                  "type": "boolean"
+                },
+                "html_url": {
+                  "type": "string"
+                },
+                "id": {
+                  "type": "integer"
+                },
+                "inherited_from": {
+                  "items": {
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "ldap_dn": {
+                  "type": "string"
+                },
+                "location": {
+                  "type": "string"
+                },
+                "login": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "node_id": {
+                  "type": "string"
+                },
+                "organizations_url": {
+                  "type": "string"
+                },
+                "owned_private_repos": {
+                  "type": "integer"
+                },
+                "permissions": {
+                  "type": "object"
+                },
+                "plan": {
+                  "type": "object"
+                },
+                "private_gists": {
+                  "type": "integer"
+                },
+                "public_gists": {
+                  "type": "integer"
+                },
+                "public_repos": {
+                  "type": "integer"
+                },
+                "received_events_url": {
+                  "type": "string"
+                },
+                "repos_url": {
+                  "type": "string"
+                },
+                "role_name": {
+                  "type": "string"
+                },
+                "site_admin": {
+                  "type": "boolean"
+                },
+                "starred_url": {
+                  "type": "string"
+                },
+                "subscriptions_url": {
+                  "type": "string"
+                },
+                "suspended_at": {
+                  "type": "string"
+                },
+                "text_matches": {
+                  "items": {
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "total_private_repos": {
+                  "type": "integer"
+                },
+                "twitter_username": {
+                  "type": "string"
+                },
+                "two_factor_authentication": {
+                  "type": "boolean"
+                },
+                "type": {
+                  "type": "string"
+                },
+                "updated_at": {
+                  "type": "string"
+                },
+                "url": {
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "assignees": {
+              "items": {
+                "properties": {
+                  "assignment": {
+                    "type": "string"
+                  },
+                  "avatar_url": {
+                    "type": "string"
+                  },
+                  "bio": {
+                    "type": "string"
+                  },
+                  "blog": {
+                    "type": "string"
+                  },
+                  "collaborators": {
+                    "type": "integer"
+                  },
+                  "company": {
+                    "type": "string"
+                  },
+                  "created_at": {
+                    "type": "string"
+                  },
+                  "disk_usage": {
+                    "type": "integer"
+                  },
+                  "email": {
+                    "type": "string"
+                  },
+                  "events_url": {
+                    "type": "string"
+                  },
+                  "followers": {
+                    "type": "integer"
+                  },
+                  "followers_url": {
+                    "type": "string"
+                  },
+                  "following": {
+                    "type": "integer"
+                  },
+                  "following_url": {
+                    "type": "string"
+                  },
+                  "gists_url": {
+                    "type": "string"
+                  },
+                  "gravatar_id": {
+                    "type": "string"
+                  },
+                  "hireable": {
+                    "type": "boolean"
+                  },
+                  "html_url": {
+                    "type": "string"
+                  },
+                  "id": {
+                    "type": "integer"
+                  },
+                  "inherited_from": {
+                    "items": {
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "ldap_dn": {
+                    "type": "string"
+                  },
+                  "location": {
+                    "type": "string"
+                  },
+                  "login": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "node_id": {
+                    "type": "string"
+                  },
+                  "organizations_url": {
+                    "type": "string"
+                  },
+                  "owned_private_repos": {
+                    "type": "integer"
+                  },
+                  "permissions": {
+                    "type": "object"
+                  },
+                  "plan": {
+                    "type": "object"
+                  },
+                  "private_gists": {
+                    "type": "integer"
+                  },
+                  "public_gists": {
+                    "type": "integer"
+                  },
+                  "public_repos": {
+                    "type": "integer"
+                  },
+                  "received_events_url": {
+                    "type": "string"
+                  },
+                  "repos_url": {
+                    "type": "string"
+                  },
+                  "role_name": {
+                    "type": "string"
+                  },
+                  "site_admin": {
+                    "type": "boolean"
+                  },
+                  "starred_url": {
+                    "type": "string"
+                  },
+                  "subscriptions_url": {
+                    "type": "string"
+                  },
+                  "suspended_at": {
+                    "type": "string"
+                  },
+                  "text_matches": {
+                    "items": {
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "total_private_repos": {
+                    "type": "integer"
+                  },
+                  "twitter_username": {
+                    "type": "string"
+                  },
+                  "two_factor_authentication": {
+                    "type": "boolean"
+                  },
+                  "type": {
+                    "type": "string"
+                  },
+                  "updated_at": {
+                    "type": "string"
+                  },
+                  "url": {
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "author_association": {
+              "type": "string"
+            },
             "body": {
               "type": "string"
             },
+            "closed_at": {
+              "type": "string"
+            },
+            "closed_by": {
+              "properties": {
+                "assignment": {
+                  "type": "string"
+                },
+                "avatar_url": {
+                  "type": "string"
+                },
+                "bio": {
+                  "type": "string"
+                },
+                "blog": {
+                  "type": "string"
+                },
+                "collaborators": {
+                  "type": "integer"
+                },
+                "company": {
+                  "type": "string"
+                },
+                "created_at": {
+                  "type": "string"
+                },
+                "disk_usage": {
+                  "type": "integer"
+                },
+                "email": {
+                  "type": "string"
+                },
+                "events_url": {
+                  "type": "string"
+                },
+                "followers": {
+                  "type": "integer"
+                },
+                "followers_url": {
+                  "type": "string"
+                },
+                "following": {
+                  "type": "integer"
+                },
+                "following_url": {
+                  "type": "string"
+                },
+                "gists_url": {
+                  "type": "string"
+                },
+                "gravatar_id": {
+                  "type": "string"
+                },
+                "hireable": {
+                  "type": "boolean"
+                },
+                "html_url": {
+                  "type": "string"
+                },
+                "id": {
+                  "type": "integer"
+                },
+                "inherited_from": {
+                  "items": {
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "ldap_dn": {
+                  "type": "string"
+                },
+                "location": {
+                  "type": "string"
+                },
+                "login": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "node_id": {
+                  "type": "string"
+                },
+                "organizations_url": {
+                  "type": "string"
+                },
+                "owned_private_repos": {
+                  "type": "integer"
+                },
+                "permissions": {
+                  "type": "object"
+                },
+                "plan": {
+                  "type": "object"
+                },
+                "private_gists": {
+                  "type": "integer"
+                },
+                "public_gists": {
+                  "type": "integer"
+                },
+                "public_repos": {
+                  "type": "integer"
+                },
+                "received_events_url": {
+                  "type": "string"
+                },
+                "repos_url": {
+                  "type": "string"
+                },
+                "role_name": {
+                  "type": "string"
+                },
+                "site_admin": {
+                  "type": "boolean"
+                },
+                "starred_url": {
+                  "type": "string"
+                },
+                "subscriptions_url": {
+                  "type": "string"
+                },
+                "suspended_at": {
+                  "type": "string"
+                },
+                "text_matches": {
+                  "items": {
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "total_private_repos": {
+                  "type": "integer"
+                },
+                "twitter_username": {
+                  "type": "string"
+                },
+                "two_factor_authentication": {
+                  "type": "boolean"
+                },
+                "type": {
+                  "type": "string"
+                },
+                "updated_at": {
+                  "type": "string"
+                },
+                "url": {
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "comments": {
+              "type": "integer"
+            },
+            "comments_url": {
+              "type": "string"
+            },
             "created_at": {
+              "type": "string"
+            },
+            "draft": {
+              "type": "boolean"
+            },
+            "events_url": {
               "type": "string"
             },
             "html_url": {
@@ -78,21 +552,233 @@
             "id": {
               "type": "integer"
             },
+            "labels": {
+              "items": {
+                "properties": {
+                  "color": {
+                    "type": "string"
+                  },
+                  "default": {
+                    "type": "boolean"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "id": {
+                    "type": "integer"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "node_id": {
+                    "type": "string"
+                  },
+                  "url": {
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "labels_url": {
+              "type": "string"
+            },
+            "locked": {
+              "type": "boolean"
+            },
+            "milestone": {
+              "type": "object"
+            },
+            "node_id": {
+              "type": "string"
+            },
             "number": {
               "type": "integer"
+            },
+            "parent_issue_url": {
+              "type": "string"
+            },
+            "pull_request": {
+              "type": "object"
+            },
+            "reactions": {
+              "type": "object"
+            },
+            "repository": {
+              "type": "object"
+            },
+            "repository_url": {
+              "type": "string"
             },
             "state": {
               "type": "string"
             },
+            "state_reason": {
+              "type": "string"
+            },
+            "text_matches": {
+              "items": {
+                "type": "object"
+              },
+              "type": "array"
+            },
             "title": {
               "type": "string"
+            },
+            "type": {
+              "type": "object"
             },
             "updated_at": {
               "type": "string"
             },
+            "url": {
+              "type": "string"
+            },
             "user": {
               "properties": {
+                "assignment": {
+                  "type": "string"
+                },
+                "avatar_url": {
+                  "type": "string"
+                },
+                "bio": {
+                  "type": "string"
+                },
+                "blog": {
+                  "type": "string"
+                },
+                "collaborators": {
+                  "type": "integer"
+                },
+                "company": {
+                  "type": "string"
+                },
+                "created_at": {
+                  "type": "string"
+                },
+                "disk_usage": {
+                  "type": "integer"
+                },
+                "email": {
+                  "type": "string"
+                },
+                "events_url": {
+                  "type": "string"
+                },
+                "followers": {
+                  "type": "integer"
+                },
+                "followers_url": {
+                  "type": "string"
+                },
+                "following": {
+                  "type": "integer"
+                },
+                "following_url": {
+                  "type": "string"
+                },
+                "gists_url": {
+                  "type": "string"
+                },
+                "gravatar_id": {
+                  "type": "string"
+                },
+                "hireable": {
+                  "type": "boolean"
+                },
+                "html_url": {
+                  "type": "string"
+                },
+                "id": {
+                  "type": "integer"
+                },
+                "inherited_from": {
+                  "items": {
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "ldap_dn": {
+                  "type": "string"
+                },
+                "location": {
+                  "type": "string"
+                },
                 "login": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "node_id": {
+                  "type": "string"
+                },
+                "organizations_url": {
+                  "type": "string"
+                },
+                "owned_private_repos": {
+                  "type": "integer"
+                },
+                "permissions": {
+                  "type": "object"
+                },
+                "plan": {
+                  "type": "object"
+                },
+                "private_gists": {
+                  "type": "integer"
+                },
+                "public_gists": {
+                  "type": "integer"
+                },
+                "public_repos": {
+                  "type": "integer"
+                },
+                "received_events_url": {
+                  "type": "string"
+                },
+                "repos_url": {
+                  "type": "string"
+                },
+                "role_name": {
+                  "type": "string"
+                },
+                "site_admin": {
+                  "type": "boolean"
+                },
+                "starred_url": {
+                  "type": "string"
+                },
+                "subscriptions_url": {
+                  "type": "string"
+                },
+                "suspended_at": {
+                  "type": "string"
+                },
+                "text_matches": {
+                  "items": {
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "total_private_repos": {
+                  "type": "integer"
+                },
+                "twitter_username": {
+                  "type": "string"
+                },
+                "two_factor_authentication": {
+                  "type": "boolean"
+                },
+                "type": {
+                  "type": "string"
+                },
+                "updated_at": {
+                  "type": "string"
+                },
+                "url": {
                   "type": "string"
                 }
               },

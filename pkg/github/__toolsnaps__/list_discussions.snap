@@ -56,6 +56,17 @@
       "discussions": {
         "items": {
           "properties": {
+            "category": {
+              "properties": {
+                "name": {
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "created_at": {
+              "type": "string"
+            },
             "html_url": {
               "type": "string"
             },
@@ -64,6 +75,17 @@
             },
             "title": {
               "type": "string"
+            },
+            "updated_at": {
+              "type": "string"
+            },
+            "user": {
+              "properties": {
+                "login": {
+                  "type": "string"
+                }
+              },
+              "type": "object"
             }
           },
           "type": "object"

@@ -292,56 +292,21 @@ Options are:
 				Type: "object",
 				Properties: map[string]*jsonschema.Schema{
 					"issue": {
-						Type: "object",
-						Properties: map[string]*jsonschema.Schema{
-							"id":         {Type: "integer"},
-							"number":     {Type: "integer"},
-							"title":      {Type: "string"},
-							"body":       {Type: "string"},
-							"state":      {Type: "string"},
-							"html_url":   {Type: "string"},
-							"created_at": {Type: "string"},
-							"updated_at": {Type: "string"},
-							"user": {
-								Type: "object",
-								Properties: map[string]*jsonschema.Schema{
-									"login": {Type: "string"},
-								},
-							},
-						},
+						Type:       "object",
+						Properties: IssueSchemaProperties(),
 					},
 					"comments": {
 						Type: "array",
 						Items: &jsonschema.Schema{
-							Type: "object",
-							Properties: map[string]*jsonschema.Schema{
-								"id":         {Type: "integer"},
-								"body":       {Type: "string"},
-								"html_url":   {Type: "string"},
-								"created_at": {Type: "string"},
-								"updated_at": {Type: "string"},
-								"user": {
-									Type: "object",
-									Properties: map[string]*jsonschema.Schema{
-										"login": {Type: "string"},
-									},
-								},
-							},
+							Type:       "object",
+							Properties: IssueCommentSchemaProperties(),
 						},
 					},
 					"sub_issues": {
 						Type: "array",
 						Items: &jsonschema.Schema{
-							Type: "object",
-							Properties: map[string]*jsonschema.Schema{
-								"id":         {Type: "integer"},
-								"number":     {Type: "integer"},
-								"title":      {Type: "string"},
-								"state":      {Type: "string"},
-								"html_url":   {Type: "string"},
-								"created_at": {Type: "string"},
-								"updated_at": {Type: "string"},
-							},
+							Type:       "object",
+							Properties: SubIssueSchemaProperties(),
 						},
 					},
 					"labels": {
@@ -350,13 +315,8 @@ Options are:
 							"labels": {
 								Type: "array",
 								Items: &jsonschema.Schema{
-									Type: "object",
-									Properties: map[string]*jsonschema.Schema{
-										"id":          {Type: "string"},
-										"name":        {Type: "string"},
-										"color":       {Type: "string"},
-										"description": {Type: "string"},
-									},
+									Type:       "object",
+									Properties: LabelSchemaProperties(),
 								},
 							},
 							"totalCount": {Type: "integer"},
@@ -698,13 +658,8 @@ func ListIssueTypes(t translations.TranslationHelperFunc) inventory.ServerTool {
 					"issue_types": {
 						Type: "array",
 						Items: &jsonschema.Schema{
-							Type: "object",
-							Properties: map[string]*jsonschema.Schema{
-								"id":          {Type: "integer"},
-								"name":        {Type: "string"},
-								"description": {Type: "string"},
-								"color":       {Type: "string"},
-							},
+							Type:       "object",
+							Properties: IssueTypeSchemaProperties(),
 						},
 					},
 				},
@@ -778,23 +733,8 @@ func AddIssueComment(t translations.TranslationHelperFunc) inventory.ServerTool 
 				Required: []string{"owner", "repo", "issue_number", "body"},
 			},
 			OutputSchema: &jsonschema.Schema{
-				Type: "object",
-				Properties: map[string]*jsonschema.Schema{
-					"id":         {Type: "integer"},
-					"html_url":   {Type: "string"},
-					"body":       {Type: "string"},
-					"created_at": {Type: "string"},
-					"updated_at": {Type: "string"},
-					"user": {
-						Type: "object",
-						Properties: map[string]*jsonschema.Schema{
-							"login":      {Type: "string"},
-							"id":         {Type: "integer"},
-							"avatar_url": {Type: "string"},
-							"html_url":   {Type: "string"},
-						},
-					},
-				},
+				Type:       "object",
+				Properties: IssueCommentSchemaProperties(),
 			},
 		},
 		[]scopes.Scope{scopes.Repo},
@@ -902,22 +842,8 @@ Options are:
 				Required: []string{"method", "owner", "repo", "issue_number", "sub_issue_id"},
 			},
 			OutputSchema: &jsonschema.Schema{
-				Type: "object",
-				Properties: map[string]*jsonschema.Schema{
-					"id":         {Type: "integer"},
-					"number":     {Type: "integer"},
-					"title":      {Type: "string"},
-					"state":      {Type: "string"},
-					"html_url":   {Type: "string"},
-					"created_at": {Type: "string"},
-					"updated_at": {Type: "string"},
-					"user": {
-						Type: "object",
-						Properties: map[string]*jsonschema.Schema{
-							"login": {Type: "string"},
-						},
-					},
-				},
+				Type:       "object",
+				Properties: SubIssueSchemaProperties(),
 			},
 		},
 		[]scopes.Scope{scopes.Repo},
@@ -1150,27 +1076,13 @@ func SearchIssues(t translations.TranslationHelperFunc) inventory.ServerTool {
 			OutputSchema: &jsonschema.Schema{
 				Type: "object",
 				Properties: map[string]*jsonschema.Schema{
-					"total_count": {Type: "integer"},
-					"issues": {
+					"total_count":        {Type: "integer"},
+					"incomplete_results": {Type: "boolean"},
+					"items": {
 						Type: "array",
 						Items: &jsonschema.Schema{
-							Type: "object",
-							Properties: map[string]*jsonschema.Schema{
-								"id":         {Type: "integer"},
-								"number":     {Type: "integer"},
-								"title":      {Type: "string"},
-								"body":       {Type: "string"},
-								"state":      {Type: "string"},
-								"html_url":   {Type: "string"},
-								"created_at": {Type: "string"},
-								"updated_at": {Type: "string"},
-								"user": {
-									Type: "object",
-									Properties: map[string]*jsonschema.Schema{
-										"login": {Type: "string"},
-									},
-								},
-							},
+							Type:       "object",
+							Properties: IssueSchemaProperties(),
 						},
 					},
 				},
@@ -1653,23 +1565,8 @@ func ListIssues(t translations.TranslationHelperFunc) inventory.ServerTool {
 					"issues": {
 						Type: "array",
 						Items: &jsonschema.Schema{
-							Type: "object",
-							Properties: map[string]*jsonschema.Schema{
-								"id":         {Type: "integer"},
-								"number":     {Type: "integer"},
-								"title":      {Type: "string"},
-								"body":       {Type: "string"},
-								"state":      {Type: "string"},
-								"html_url":   {Type: "string"},
-								"created_at": {Type: "string"},
-								"updated_at": {Type: "string"},
-								"user": {
-									Type: "object",
-									Properties: map[string]*jsonschema.Schema{
-										"login": {Type: "string"},
-									},
-								},
-							},
+							Type:       "object",
+							Properties: IssueSchemaProperties(),
 						},
 					},
 					"pageInfo": {

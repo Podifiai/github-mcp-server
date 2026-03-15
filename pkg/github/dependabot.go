@@ -52,10 +52,22 @@ func GetDependabotAlert(t translations.TranslationHelperFunc) inventory.ServerTo
 			OutputSchema: &jsonschema.Schema{
 				Type: "object",
 				Properties: map[string]*jsonschema.Schema{
-					"number":   {Type: "integer"},
-					"state":    {Type: "string"},
-					"html_url": {Type: "string"},
-					"severity": {Type: "string"},
+					"number": {Type: "integer"},
+					"state":  {Type: "string"},
+					"dependency": {
+						Type: "object",
+						Properties: map[string]*jsonschema.Schema{
+							"package": {
+								Type: "object",
+								Properties: map[string]*jsonschema.Schema{
+									"ecosystem": {Type: "string"},
+									"name":      {Type: "string"},
+								},
+							},
+							"manifest_path": {Type: "string"},
+							"scope":         {Type: "string"},
+						},
+					},
 					"security_advisory": {
 						Type: "object",
 						Properties: map[string]*jsonschema.Schema{
@@ -63,21 +75,86 @@ func GetDependabotAlert(t translations.TranslationHelperFunc) inventory.ServerTo
 							"cve_id":      {Type: "string"},
 							"summary":     {Type: "string"},
 							"description": {Type: "string"},
-							"severity":    {Type: "string"},
+							"vulnerabilities": {
+								Type: "array",
+								Items: &jsonschema.Schema{
+									Type: "object",
+									Properties: map[string]*jsonschema.Schema{
+										"package": {
+											Type: "object",
+											Properties: map[string]*jsonschema.Schema{
+												"ecosystem": {Type: "string"},
+												"name":      {Type: "string"},
+											},
+										},
+										"severity":                 {Type: "string"},
+										"vulnerable_version_range": {Type: "string"},
+										"first_patched_version":    {Type: "object"},
+										"patched_versions":         {Type: "string"},
+										"vulnerable_functions":     {Type: "array", Items: &jsonschema.Schema{Type: "string"}},
+									},
+								},
+							},
+							"severity": {Type: "string"},
+							"cvss": {
+								Type: "object",
+								Properties: map[string]*jsonschema.Schema{
+									"score":         {Type: "number"},
+									"vector_string": {Type: "string"},
+								},
+							},
+							"cwes": {
+								Type: "array",
+								Items: &jsonschema.Schema{
+									Type: "object",
+									Properties: map[string]*jsonschema.Schema{
+										"cwe_id": {Type: "string"},
+										"name":   {Type: "string"},
+									},
+								},
+							},
+							"epss": {
+								Type: "object",
+								Properties: map[string]*jsonschema.Schema{
+									"percentage": {Type: "number"},
+									"percentile": {Type: "number"},
+								},
+							},
+							"identifiers":  {Type: "array", Items: &jsonschema.Schema{Type: "object"}},
+							"references":   {Type: "array", Items: &jsonschema.Schema{Type: "object"}},
+							"published_at": {Type: "string"},
+							"updated_at":   {Type: "string"},
+							"withdrawn_at": {Type: "string"},
 						},
 					},
-					"dependency": {
+					"security_vulnerability": {
 						Type: "object",
 						Properties: map[string]*jsonschema.Schema{
 							"package": {
 								Type: "object",
 								Properties: map[string]*jsonschema.Schema{
-									"name":      {Type: "string"},
 									"ecosystem": {Type: "string"},
+									"name":      {Type: "string"},
 								},
 							},
+							"severity":                 {Type: "string"},
+							"vulnerable_version_range": {Type: "string"},
+							"first_patched_version":    {Type: "object"},
+							"patched_versions":         {Type: "string"},
+							"vulnerable_functions":     {Type: "array", Items: &jsonschema.Schema{Type: "string"}},
 						},
 					},
+					"url":               {Type: "string"},
+					"html_url":          {Type: "string"},
+					"created_at":        {Type: "string"},
+					"updated_at":        {Type: "string"},
+					"dismissed_at":      {Type: "string"},
+					"dismissed_by":      UserSchema(),
+					"dismissed_reason":  {Type: "string"},
+					"dismissed_comment": {Type: "string"},
+					"fixed_at":          {Type: "string"},
+					"auto_dismissed_at": {Type: "string"},
+					"repository":        {Type: "object"},
 				},
 			},
 		},
@@ -172,10 +249,22 @@ func ListDependabotAlerts(t translations.TranslationHelperFunc) inventory.Server
 						Items: &jsonschema.Schema{
 							Type: "object",
 							Properties: map[string]*jsonschema.Schema{
-								"number":   {Type: "integer"},
-								"state":    {Type: "string"},
-								"html_url": {Type: "string"},
-								"severity": {Type: "string"},
+								"number": {Type: "integer"},
+								"state":  {Type: "string"},
+								"dependency": {
+									Type: "object",
+									Properties: map[string]*jsonschema.Schema{
+										"package": {
+											Type: "object",
+											Properties: map[string]*jsonschema.Schema{
+												"ecosystem": {Type: "string"},
+												"name":      {Type: "string"},
+											},
+										},
+										"manifest_path": {Type: "string"},
+										"scope":         {Type: "string"},
+									},
+								},
 								"security_advisory": {
 									Type: "object",
 									Properties: map[string]*jsonschema.Schema{
@@ -183,21 +272,86 @@ func ListDependabotAlerts(t translations.TranslationHelperFunc) inventory.Server
 										"cve_id":      {Type: "string"},
 										"summary":     {Type: "string"},
 										"description": {Type: "string"},
-										"severity":    {Type: "string"},
+										"vulnerabilities": {
+											Type: "array",
+											Items: &jsonschema.Schema{
+												Type: "object",
+												Properties: map[string]*jsonschema.Schema{
+													"package": {
+														Type: "object",
+														Properties: map[string]*jsonschema.Schema{
+															"ecosystem": {Type: "string"},
+															"name":      {Type: "string"},
+														},
+													},
+													"severity":                 {Type: "string"},
+													"vulnerable_version_range": {Type: "string"},
+													"first_patched_version":    {Type: "object"},
+													"patched_versions":         {Type: "string"},
+													"vulnerable_functions":     {Type: "array", Items: &jsonschema.Schema{Type: "string"}},
+												},
+											},
+										},
+										"severity": {Type: "string"},
+										"cvss": {
+											Type: "object",
+											Properties: map[string]*jsonschema.Schema{
+												"score":         {Type: "number"},
+												"vector_string": {Type: "string"},
+											},
+										},
+										"cwes": {
+											Type: "array",
+											Items: &jsonschema.Schema{
+												Type: "object",
+												Properties: map[string]*jsonschema.Schema{
+													"cwe_id": {Type: "string"},
+													"name":   {Type: "string"},
+												},
+											},
+										},
+										"epss": {
+											Type: "object",
+											Properties: map[string]*jsonschema.Schema{
+												"percentage": {Type: "number"},
+												"percentile": {Type: "number"},
+											},
+										},
+										"identifiers":  {Type: "array", Items: &jsonschema.Schema{Type: "object"}},
+										"references":   {Type: "array", Items: &jsonschema.Schema{Type: "object"}},
+										"published_at": {Type: "string"},
+										"updated_at":   {Type: "string"},
+										"withdrawn_at": {Type: "string"},
 									},
 								},
-								"dependency": {
+								"security_vulnerability": {
 									Type: "object",
 									Properties: map[string]*jsonschema.Schema{
 										"package": {
 											Type: "object",
 											Properties: map[string]*jsonschema.Schema{
-												"name":      {Type: "string"},
 												"ecosystem": {Type: "string"},
+												"name":      {Type: "string"},
 											},
 										},
+										"severity":                 {Type: "string"},
+										"vulnerable_version_range": {Type: "string"},
+										"first_patched_version":    {Type: "object"},
+										"patched_versions":         {Type: "string"},
+										"vulnerable_functions":     {Type: "array", Items: &jsonschema.Schema{Type: "string"}},
 									},
 								},
+								"url":               {Type: "string"},
+								"html_url":          {Type: "string"},
+								"created_at":        {Type: "string"},
+								"updated_at":        {Type: "string"},
+								"dismissed_at":      {Type: "string"},
+								"dismissed_by":      UserSchema(),
+								"dismissed_reason":  {Type: "string"},
+								"dismissed_comment": {Type: "string"},
+								"fixed_at":          {Type: "string"},
+								"auto_dismissed_at": {Type: "string"},
+								"repository":        {Type: "object"},
 							},
 						},
 					},

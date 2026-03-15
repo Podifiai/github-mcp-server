@@ -190,9 +190,23 @@ func ListDiscussions(t translations.TranslationHelperFunc) inventory.ServerTool 
 						Items: &jsonschema.Schema{
 							Type: "object",
 							Properties: map[string]*jsonschema.Schema{
-								"number":   {Type: "integer"},
-								"title":    {Type: "string"},
-								"html_url": {Type: "string"},
+								"number":     {Type: "integer"},
+								"title":      {Type: "string"},
+								"html_url":   {Type: "string"},
+								"created_at": {Type: "string"},
+								"updated_at": {Type: "string"},
+								"user": {
+									Type: "object",
+									Properties: map[string]*jsonschema.Schema{
+										"login": {Type: "string"},
+									},
+								},
+								"category": {
+									Type: "object",
+									Properties: map[string]*jsonschema.Schema{
+										"name": {Type: "string"},
+									},
+								},
 							},
 						},
 					},

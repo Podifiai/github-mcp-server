@@ -64,20 +64,12 @@ func GetCommit(t translations.TranslationHelperFunc) inventory.ServerTool {
 						Properties: map[string]*jsonschema.Schema{
 							"message": {Type: "string"},
 							"author": {
-								Type: "object",
-								Properties: map[string]*jsonschema.Schema{
-									"name":  {Type: "string"},
-									"email": {Type: "string"},
-									"date":  {Type: "string"},
-								},
+								Type:       "object",
+								Properties: CommitAuthorSchemaProperties(),
 							},
 							"committer": {
-								Type: "object",
-								Properties: map[string]*jsonschema.Schema{
-									"name":  {Type: "string"},
-									"email": {Type: "string"},
-									"date":  {Type: "string"},
-								},
+								Type:       "object",
+								Properties: CommitAuthorSchemaProperties(),
 							},
 						},
 					},
@@ -88,6 +80,7 @@ func GetCommit(t translations.TranslationHelperFunc) inventory.ServerTool {
 							"id":          {Type: "integer"},
 							"profile_url": {Type: "string"},
 							"avatar_url":  {Type: "string"},
+							"details":     {Type: "object"},
 						},
 					},
 					"committer": {
@@ -97,27 +90,18 @@ func GetCommit(t translations.TranslationHelperFunc) inventory.ServerTool {
 							"id":          {Type: "integer"},
 							"profile_url": {Type: "string"},
 							"avatar_url":  {Type: "string"},
+							"details":     {Type: "object"},
 						},
 					},
 					"stats": {
-						Type: "object",
-						Properties: map[string]*jsonschema.Schema{
-							"additions": {Type: "integer"},
-							"deletions": {Type: "integer"},
-							"total":     {Type: "integer"},
-						},
+						Type:       "object",
+						Properties: CommitStatsSchemaProperties(),
 					},
 					"files": {
 						Type: "array",
 						Items: &jsonschema.Schema{
-							Type: "object",
-							Properties: map[string]*jsonschema.Schema{
-								"filename":  {Type: "string"},
-								"status":    {Type: "string"},
-								"additions": {Type: "integer"},
-								"deletions": {Type: "integer"},
-								"changes":   {Type: "integer"},
-							},
+							Type:       "object",
+							Properties: CommitFileSchemaProperties(),
 						},
 					},
 				},
@@ -240,20 +224,12 @@ func ListCommits(t translations.TranslationHelperFunc) inventory.ServerTool {
 									Properties: map[string]*jsonschema.Schema{
 										"message": {Type: "string"},
 										"author": {
-											Type: "object",
-											Properties: map[string]*jsonschema.Schema{
-												"name":  {Type: "string"},
-												"email": {Type: "string"},
-												"date":  {Type: "string"},
-											},
+											Type:       "object",
+											Properties: CommitAuthorSchemaProperties(),
 										},
 										"committer": {
-											Type: "object",
-											Properties: map[string]*jsonschema.Schema{
-												"name":  {Type: "string"},
-												"email": {Type: "string"},
-												"date":  {Type: "string"},
-											},
+											Type:       "object",
+											Properties: CommitAuthorSchemaProperties(),
 										},
 									},
 								},
@@ -264,6 +240,7 @@ func ListCommits(t translations.TranslationHelperFunc) inventory.ServerTool {
 										"id":          {Type: "integer"},
 										"profile_url": {Type: "string"},
 										"avatar_url":  {Type: "string"},
+										"details":     {Type: "object"},
 									},
 								},
 								"committer": {
@@ -273,6 +250,18 @@ func ListCommits(t translations.TranslationHelperFunc) inventory.ServerTool {
 										"id":          {Type: "integer"},
 										"profile_url": {Type: "string"},
 										"avatar_url":  {Type: "string"},
+										"details":     {Type: "object"},
+									},
+								},
+								"stats": {
+									Type:       "object",
+									Properties: CommitStatsSchemaProperties(),
+								},
+								"files": {
+									Type: "array",
+									Items: &jsonschema.Schema{
+										Type:       "object",
+										Properties: CommitFileSchemaProperties(),
 									},
 								},
 							},
@@ -554,28 +543,17 @@ If the SHA is not provided, the tool will attempt to acquire it by fetching the 
 				},
 				Required: []string{"owner", "repo", "path", "content", "message", "branch"},
 			},
-			OutputSchema: &jsonschema.Schema{
-				Type: "object",
-				Properties: map[string]*jsonschema.Schema{
-					"content": {
-						Type: "object",
-						Properties: map[string]*jsonschema.Schema{
-							"name":     {Type: "string"},
-							"path":     {Type: "string"},
-							"sha":      {Type: "string"},
-							"html_url": {Type: "string"},
-						},
-					},
-					"commit": {
-						Type: "object",
-						Properties: map[string]*jsonschema.Schema{
-							"sha":      {Type: "string"},
-							"html_url": {Type: "string"},
-							"message":  {Type: "string"},
-						},
-					},
-				},
-			},
+			OutputSchema: func() *jsonschema.Schema {
+				props := CommitSchemaProperties()
+				props["content"] = &jsonschema.Schema{
+					Type:       "object",
+					Properties: RepositoryContentSchemaProperties(),
+				}
+				return &jsonschema.Schema{
+					Type:       "object",
+					Properties: props,
+				}
+			}(),
 		},
 		[]scopes.Scope{scopes.Repo},
 		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *github.RepositoryContentResponse, error) {
@@ -896,17 +874,8 @@ func GetFileContents(t translations.TranslationHelperFunc) inventory.ServerTool 
 					"directory": {
 						Type: "array",
 						Items: &jsonschema.Schema{
-							Type: "object",
-							Properties: map[string]*jsonschema.Schema{
-								"name":         {Type: "string"},
-								"path":         {Type: "string"},
-								"sha":          {Type: "string"},
-								"size":         {Type: "integer"},
-								"url":          {Type: "string"},
-								"html_url":     {Type: "string"},
-								"download_url": {Type: "string"},
-								"type":         {Type: "string"},
-							},
+							Type:       "object",
+							Properties: RepositoryContentSchemaProperties(),
 						},
 					},
 				},
@@ -1205,20 +1174,8 @@ func DeleteFile(t translations.TranslationHelperFunc) inventory.ServerTool {
 				Type: "object",
 				Properties: map[string]*jsonschema.Schema{
 					"commit": {
-						Type: "object",
-						Properties: map[string]*jsonschema.Schema{
-							"sha":     {Type: "string"},
-							"url":     {Type: "string"},
-							"message": {Type: "string"},
-							"author": {
-								Type: "object",
-								Properties: map[string]*jsonschema.Schema{
-									"name":  {Type: "string"},
-									"email": {Type: "string"},
-									"date":  {Type: "string"},
-								},
-							},
-						},
+						Type:       "object",
+						Properties: CommitSchemaProperties(),
 					},
 					"content": {Type: "null"},
 				},
@@ -1406,8 +1363,9 @@ func CreateBranch(t translations.TranslationHelperFunc) inventory.ServerTool {
 			OutputSchema: &jsonschema.Schema{
 				Type: "object",
 				Properties: map[string]*jsonschema.Schema{
-					"ref": {Type: "string"},
-					"url": {Type: "string"},
+					"ref":     {Type: "string"},
+					"url":     {Type: "string"},
+					"node_id": {Type: "string"},
 					"object": {
 						Type: "object",
 						Properties: map[string]*jsonschema.Schema{
@@ -1552,8 +1510,9 @@ func PushFiles(t translations.TranslationHelperFunc) inventory.ServerTool {
 			OutputSchema: &jsonschema.Schema{
 				Type: "object",
 				Properties: map[string]*jsonschema.Schema{
-					"ref": {Type: "string"},
-					"url": {Type: "string"},
+					"ref":     {Type: "string"},
+					"url":     {Type: "string"},
+					"node_id": {Type: "string"},
 					"object": {
 						Type: "object",
 						Properties: map[string]*jsonschema.Schema{
@@ -1787,14 +1746,12 @@ func ListTags(t translations.TranslationHelperFunc) inventory.ServerTool {
 							Properties: map[string]*jsonschema.Schema{
 								"name": {Type: "string"},
 								"commit": {
-									Type: "object",
-									Properties: map[string]*jsonschema.Schema{
-										"sha": {Type: "string"},
-										"url": {Type: "string"},
-									},
+									Type:       "object",
+									Properties: CommitSchemaProperties(),
 								},
 								"zipball_url": {Type: "string"},
 								"tarball_url": {Type: "string"},
+								"node_id":     {Type: "string"},
 							},
 						},
 					},
@@ -1884,13 +1841,8 @@ func GetTag(t translations.TranslationHelperFunc) inventory.ServerTool {
 				Required: []string{"owner", "repo", "tag"},
 			},
 			OutputSchema: &jsonschema.Schema{
-				Type: "object",
-				Properties: map[string]*jsonschema.Schema{
-					"tag":     {Type: "string"},
-					"sha":     {Type: "string"},
-					"message": {Type: "string"},
-					"url":     {Type: "string"},
-				},
+				Type:       "object",
+				Properties: TagSchemaProperties(),
 			},
 		},
 		[]scopes.Scope{scopes.Repo},
@@ -1997,26 +1949,8 @@ func ListReleases(t translations.TranslationHelperFunc) inventory.ServerTool {
 					"releases": {
 						Type: "array",
 						Items: &jsonschema.Schema{
-							Type: "object",
-							Properties: map[string]*jsonschema.Schema{
-								"id":           {Type: "integer"},
-								"tag_name":     {Type: "string"},
-								"name":         {Type: "string"},
-								"body":         {Type: "string"},
-								"html_url":     {Type: "string"},
-								"published_at": {Type: "string"},
-								"prerelease":   {Type: "boolean"},
-								"draft":        {Type: "boolean"},
-								"author": {
-									Type: "object",
-									Properties: map[string]*jsonschema.Schema{
-										"login":      {Type: "string"},
-										"id":         {Type: "integer"},
-										"avatar_url": {Type: "string"},
-										"html_url":   {Type: "string"},
-									},
-								},
-							},
+							Type:       "object",
+							Properties: RepositoryReleaseSchemaProperties(),
 						},
 					},
 				},
@@ -2097,26 +2031,8 @@ func GetLatestRelease(t translations.TranslationHelperFunc) inventory.ServerTool
 				Required: []string{"owner", "repo"},
 			},
 			OutputSchema: &jsonschema.Schema{
-				Type: "object",
-				Properties: map[string]*jsonschema.Schema{
-					"id":           {Type: "integer"},
-					"tag_name":     {Type: "string"},
-					"name":         {Type: "string"},
-					"body":         {Type: "string"},
-					"html_url":     {Type: "string"},
-					"published_at": {Type: "string"},
-					"prerelease":   {Type: "boolean"},
-					"draft":        {Type: "boolean"},
-					"author": {
-						Type: "object",
-						Properties: map[string]*jsonschema.Schema{
-							"login":      {Type: "string"},
-							"id":         {Type: "integer"},
-							"avatar_url": {Type: "string"},
-							"html_url":   {Type: "string"},
-						},
-					},
-				},
+				Type:       "object",
+				Properties: RepositoryReleaseSchemaProperties(),
 			},
 		},
 		[]scopes.Scope{scopes.Repo},
@@ -2188,26 +2104,8 @@ func GetReleaseByTag(t translations.TranslationHelperFunc) inventory.ServerTool 
 				Required: []string{"owner", "repo", "tag"},
 			},
 			OutputSchema: &jsonschema.Schema{
-				Type: "object",
-				Properties: map[string]*jsonschema.Schema{
-					"id":           {Type: "integer"},
-					"tag_name":     {Type: "string"},
-					"name":         {Type: "string"},
-					"body":         {Type: "string"},
-					"html_url":     {Type: "string"},
-					"published_at": {Type: "string"},
-					"prerelease":   {Type: "boolean"},
-					"draft":        {Type: "boolean"},
-					"author": {
-						Type: "object",
-						Properties: map[string]*jsonschema.Schema{
-							"login":      {Type: "string"},
-							"id":         {Type: "integer"},
-							"avatar_url": {Type: "string"},
-							"html_url":   {Type: "string"},
-						},
-					},
-				},
+				Type:       "object",
+				Properties: RepositoryReleaseSchemaProperties(),
 			},
 		},
 		[]scopes.Scope{scopes.Repo},
@@ -2306,6 +2204,8 @@ func ListStarredRepositories(t translations.TranslationHelperFunc) inventory.Ser
 								"forks_count":       {Type: "integer"},
 								"open_issues_count": {Type: "integer"},
 								"updated_at":        {Type: "string"},
+								"created_at":        {Type: "string"},
+								"topics":            {Type: "array", Items: &jsonschema.Schema{Type: "string"}},
 								"private":           {Type: "boolean"},
 								"fork":              {Type: "boolean"},
 								"archived":          {Type: "boolean"},

@@ -496,16 +496,8 @@ func SearchUsers(t translations.TranslationHelperFunc) inventory.ServerTool {
 					"total_count":        {Type: "integer"},
 					"incomplete_results": {Type: "boolean"},
 					"items": {
-						Type: "array",
-						Items: &jsonschema.Schema{
-							Type: "object",
-							Properties: map[string]*jsonschema.Schema{
-								"login":       {Type: "string"},
-								"id":          {Type: "integer"},
-								"profile_url": {Type: "string"},
-								"avatar_url":  {Type: "string"},
-							},
-						},
+						Type:  "array",
+						Items: MinimalUserSchema(),
 					},
 				},
 			},
@@ -557,16 +549,8 @@ func SearchOrgs(t translations.TranslationHelperFunc) inventory.ServerTool {
 					"total_count":        {Type: "integer"},
 					"incomplete_results": {Type: "boolean"},
 					"items": {
-						Type: "array",
-						Items: &jsonschema.Schema{
-							Type: "object",
-							Properties: map[string]*jsonschema.Schema{
-								"login":       {Type: "string"},
-								"id":          {Type: "integer"},
-								"profile_url": {Type: "string"},
-								"avatar_url":  {Type: "string"},
-							},
-						},
+						Type:  "array",
+						Items: MinimalUserSchema(),
 					},
 				},
 			},

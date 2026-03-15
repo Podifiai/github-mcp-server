@@ -55,6 +55,9 @@
   "name": "push_files",
   "outputSchema": {
     "properties": {
+      "node_id": {
+        "type": "string"
+      },
       "object": {
         "properties": {
           "sha": {

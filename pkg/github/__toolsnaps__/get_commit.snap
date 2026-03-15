@@ -50,6 +50,9 @@
           "avatar_url": {
             "type": "string"
           },
+          "details": {
+            "type": "object"
+          },
           "id": {
             "type": "integer"
           },
@@ -74,6 +77,9 @@
               },
               "name": {
                 "type": "string"
+              },
+              "username": {
+                "type": "string"
               }
             },
             "type": "object"
@@ -87,6 +93,9 @@
                 "type": "string"
               },
               "name": {
+                "type": "string"
+              },
+              "username": {
                 "type": "string"
               }
             },
@@ -102,6 +111,9 @@
         "properties": {
           "avatar_url": {
             "type": "string"
+          },
+          "details": {
+            "type": "object"
           },
           "id": {
             "type": "integer"
@@ -121,13 +133,31 @@
             "additions": {
               "type": "integer"
             },
+            "blob_url": {
+              "type": "string"
+            },
             "changes": {
               "type": "integer"
+            },
+            "contents_url": {
+              "type": "string"
             },
             "deletions": {
               "type": "integer"
             },
             "filename": {
+              "type": "string"
+            },
+            "patch": {
+              "type": "string"
+            },
+            "previous_filename": {
+              "type": "string"
+            },
+            "raw_url": {
+              "type": "string"
+            },
+            "sha": {
               "type": "string"
             },
             "status": {

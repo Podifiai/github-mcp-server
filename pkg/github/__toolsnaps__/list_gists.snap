@@ -34,6 +34,9 @@
       "gists": {
         "items": {
           "properties": {
+            "comments": {
+              "type": "integer"
+            },
             "created_at": {
               "type": "string"
             },
@@ -41,24 +44,13 @@
               "type": "string"
             },
             "files": {
-              "additionalProperties": {
-                "properties": {
-                  "filename": {
-                    "type": "string"
-                  },
-                  "language": {
-                    "type": "string"
-                  },
-                  "size": {
-                    "type": "integer"
-                  },
-                  "type": {
-                    "type": "string"
-                  }
-                },
-                "type": "object"
-              },
               "type": "object"
+            },
+            "git_pull_url": {
+              "type": "string"
+            },
+            "git_push_url": {
+              "type": "string"
             },
             "html_url": {
               "type": "string"
@@ -66,10 +58,16 @@
             "id": {
               "type": "string"
             },
+            "node_id": {
+              "type": "string"
+            },
             "owner": {
               "properties": {
                 "avatar_url": {
                   "type": "string"
+                },
+                "details": {
+                  "type": "object"
                 },
                 "id": {
                   "type": "integer"

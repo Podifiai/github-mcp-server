@@ -40,16 +40,91 @@
           "properties": {
             "commit": {
               "properties": {
+                "author": {
+                  "properties": {
+                    "date": {
+                      "type": "string"
+                    },
+                    "email": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "username": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                },
+                "comment_count": {
+                  "type": "integer"
+                },
+                "committer": {
+                  "properties": {
+                    "date": {
+                      "type": "string"
+                    },
+                    "email": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "username": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                },
+                "html_url": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "node_id": {
+                  "type": "string"
+                },
+                "parents": {
+                  "items": {
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
                 "sha": {
                   "type": "string"
                 },
+                "tree": {
+                  "type": "object"
+                },
                 "url": {
                   "type": "string"
+                },
+                "verification": {
+                  "properties": {
+                    "payload": {
+                      "type": "string"
+                    },
+                    "reason": {
+                      "type": "string"
+                    },
+                    "signature": {
+                      "type": "string"
+                    },
+                    "verified": {
+                      "type": "boolean"
+                    }
+                  },
+                  "type": "object"
                 }
               },
               "type": "object"
             },
             "name": {
+              "type": "string"
+            },
+            "node_id": {
               "type": "string"
             },
             "tarball_url": {

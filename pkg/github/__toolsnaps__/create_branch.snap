@@ -32,6 +32,9 @@
   "name": "create_branch",
   "outputSchema": {
     "properties": {
+      "node_id": {
+        "type": "string"
+      },
       "object": {
         "properties": {
           "sha": {

@@ -3,6 +3,7 @@ package inventory
 import (
 	"context"
 	"encoding/json"
+	"reflect"
 
 	"github.com/github/github-mcp-server/pkg/octicons"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -92,6 +93,12 @@ type ServerTool struct {
 	// InsidersOnly marks this tool as only available when insiders mode is enabled.
 	// When insiders mode is disabled, tools with this flag set are completely omitted.
 	InsidersOnly bool
+
+	// OutType is the reflect.Type of the Out type parameter used in the tool's handler.
+	// Set by generic constructors (NewServerTool, NewServerToolWithContextHandler) that
+	// have access to the Out type parameter. Used in tests to validate that OutputSchema
+	// covers all fields of the actual structured content output type.
+	OutType reflect.Type
 }
 
 // IsReadOnly returns true if this tool is marked as read-only via annotations.
@@ -144,6 +151,7 @@ func NewServerTool[In any, Out any](tool mcp.Tool, toolset ToolsetMetadata, hand
 	return ServerTool{
 		Tool:    tool,
 		Toolset: toolset,
+		OutType: reflect.TypeFor[Out](),
 		HandlerFunc: func(deps any) mcp.ToolHandler {
 			typedHandler := handlerFn(deps)
 			return func(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -171,6 +179,7 @@ func NewServerToolWithContextHandler[In any, Out any](tool mcp.Tool, toolset Too
 	return ServerTool{
 		Tool:    tool,
 		Toolset: toolset,
+		OutType: reflect.TypeFor[Out](),
 		// HandlerFunc ignores deps - deps are retrieved from context at call time
 		HandlerFunc: func(_ any) mcp.ToolHandler {
 			return func(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {

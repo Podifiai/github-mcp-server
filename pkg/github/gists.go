@@ -72,36 +72,8 @@ func ListGists(t translations.TranslationHelperFunc) inventory.ServerTool {
 					"gists": {
 						Type: "array",
 						Items: &jsonschema.Schema{
-							Type: "object",
-							Properties: map[string]*jsonschema.Schema{
-								"id":          {Type: "string"},
-								"description": {Type: "string"},
-								"public":      {Type: "boolean"},
-								"html_url":    {Type: "string"},
-								"files": {
-									Type: "object",
-									AdditionalProperties: &jsonschema.Schema{
-										Type: "object",
-										Properties: map[string]*jsonschema.Schema{
-											"filename": {Type: "string"},
-											"type":     {Type: "string"},
-											"language": {Type: "string"},
-											"size":     {Type: "integer"},
-										},
-									},
-								},
-								"created_at": {Type: "string"},
-								"updated_at": {Type: "string"},
-								"owner": {
-									Type: "object",
-									Properties: map[string]*jsonschema.Schema{
-										"login":       {Type: "string"},
-										"id":          {Type: "integer"},
-										"profile_url": {Type: "string"},
-										"avatar_url":  {Type: "string"},
-									},
-								},
-							},
+							Type:       "object",
+							Properties: GistSchemaProperties(),
 						},
 					},
 				},
@@ -229,36 +201,8 @@ func GetGist(t translations.TranslationHelperFunc) inventory.ServerTool {
 				Required: []string{"gist_id"},
 			},
 			OutputSchema: &jsonschema.Schema{
-				Type: "object",
-				Properties: map[string]*jsonschema.Schema{
-					"id":          {Type: "string"},
-					"description": {Type: "string"},
-					"public":      {Type: "boolean"},
-					"html_url":    {Type: "string"},
-					"files": {
-						Type: "object",
-						AdditionalProperties: &jsonschema.Schema{
-							Type: "object",
-							Properties: map[string]*jsonschema.Schema{
-								"filename": {Type: "string"},
-								"type":     {Type: "string"},
-								"language": {Type: "string"},
-								"size":     {Type: "integer"},
-							},
-						},
-					},
-					"created_at": {Type: "string"},
-					"updated_at": {Type: "string"},
-					"owner": {
-						Type: "object",
-						Properties: map[string]*jsonschema.Schema{
-							"login":       {Type: "string"},
-							"id":          {Type: "integer"},
-							"profile_url": {Type: "string"},
-							"avatar_url":  {Type: "string"},
-						},
-					},
-				},
+				Type:       "object",
+				Properties: GistSchemaProperties(),
 			},
 		},
 		nil,
