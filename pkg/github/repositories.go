@@ -367,27 +367,6 @@ type StarOperationResult struct {
 	Message string `json:"message"`
 }
 
-// GetFileContentsResult wraps the get_file_contents response which can be either a file or directory.
-type GetFileContentsResult struct {
-	Type      string                      `json:"type"` // "file" or "directory"
-	File      *FileContents               `json:"file,omitempty"`
-	Directory []*github.RepositoryContent `json:"directory,omitempty"`
-}
-
-// FileContents represents a single file from get_file_contents.
-type FileContents struct {
-	Name        string `json:"name"`
-	Path        string `json:"path"`
-	SHA         string `json:"sha"`
-	Size        int    `json:"size"`
-	URL         string `json:"url"`
-	HTMLURL     string `json:"html_url"`
-	DownloadURL string `json:"download_url,omitempty"`
-	Type        string `json:"type"`
-	Content     string `json:"content,omitempty"`
-	Encoding    string `json:"encoding,omitempty"`
-}
-
 // ListBranches creates a tool to list branches in a GitHub repository.
 func ListBranches(t translations.TranslationHelperFunc) inventory.ServerTool {
 	return NewTool(
@@ -816,7 +795,7 @@ func CreateRepository(t translations.TranslationHelperFunc) inventory.ServerTool
 
 // GetFileContents creates a tool to get the contents of a file or directory from a GitHub repository.
 func GetFileContents(t translations.TranslationHelperFunc) inventory.ServerTool {
-	return NewTool(
+	return NewToolFromHandler(
 		ToolsetMetadataRepos,
 		mcp.Tool{
 			Name:        "get_file_contents",
@@ -852,71 +831,49 @@ func GetFileContents(t translations.TranslationHelperFunc) inventory.ServerTool 
 				},
 				Required: []string{"owner", "repo"},
 			},
-			OutputSchema: &jsonschema.Schema{
-				Type: "object",
-				Properties: map[string]*jsonschema.Schema{
-					"type": {Type: "string", Enum: []any{"file", "directory"}},
-					"file": {
-						Type: "object",
-						Properties: map[string]*jsonschema.Schema{
-							"name":         {Type: "string"},
-							"path":         {Type: "string"},
-							"sha":          {Type: "string"},
-							"size":         {Type: "integer"},
-							"url":          {Type: "string"},
-							"html_url":     {Type: "string"},
-							"download_url": {Type: "string"},
-							"type":         {Type: "string"},
-							"content":      {Type: "string"},
-							"encoding":     {Type: "string"},
-						},
-					},
-					"directory": {
-						Type: "array",
-						Items: &jsonschema.Schema{
-							Type:       "object",
-							Properties: RepositoryContentSchemaProperties(),
-						},
-					},
-				},
-			},
 		},
 		[]scopes.Scope{scopes.Repo},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *GetFileContentsResult, error) {
+		func(ctx context.Context, deps ToolDependencies, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			args := map[string]any{}
+			if req.Params.Arguments != nil {
+				if err := json.Unmarshal(req.Params.Arguments, &args); err != nil {
+					return utils.NewToolResultError(fmt.Sprintf("failed to parse arguments: %s", err)), nil
+				}
+			}
 			owner, err := RequiredParam[string](args, "owner")
 			if err != nil {
-				return utils.NewToolResultError(err.Error()), nil, nil
+				return utils.NewToolResultError(err.Error()), nil
 			}
 			repo, err := RequiredParam[string](args, "repo")
 			if err != nil {
-				return utils.NewToolResultError(err.Error()), nil, nil
+				return utils.NewToolResultError(err.Error()), nil
 			}
 
 			path, err := OptionalParam[string](args, "path")
 			if err != nil {
-				return utils.NewToolResultError(err.Error()), nil, nil
+				return utils.NewToolResultError(err.Error()), nil
 			}
 			path = strings.TrimPrefix(path, "/")
 
 			ref, err := OptionalParam[string](args, "ref")
 			if err != nil {
-				return utils.NewToolResultError(err.Error()), nil, nil
+				return utils.NewToolResultError(err.Error()), nil
 			}
 			originalRef := ref
 
 			sha, err := OptionalParam[string](args, "sha")
 			if err != nil {
-				return utils.NewToolResultError(err.Error()), nil, nil
+				return utils.NewToolResultError(err.Error()), nil
 			}
 
 			client, err := deps.GetClient(ctx)
 			if err != nil {
-				return utils.NewToolResultError("failed to get GitHub client"), nil, nil
+				return utils.NewToolResultError("failed to get GitHub client"), nil
 			}
 
 			rawOpts, fallbackUsed, err := resolveGitReference(ctx, client, owner, repo, ref, sha)
 			if err != nil {
-				return utils.NewToolResultError(fmt.Sprintf("failed to resolve git reference: %s", err)), nil, nil
+				return utils.NewToolResultError(fmt.Sprintf("failed to resolve git reference: %s", err)), nil
 			}
 
 			if rawOpts.SHA != "" {
@@ -936,8 +893,7 @@ func GetFileContents(t translations.TranslationHelperFunc) inventory.ServerTool 
 			// Instead let's try to find it in the Git Tree by matching the end of the path.
 			if err != nil || (fileContent == nil && dirContent == nil) {
 				result, _, matchErr := matchFiles(ctx, client, owner, repo, ref, path, rawOpts, 0)
-				// matchFiles returns ResourceContents which doesn't have a typed Out
-				return result, nil, matchErr
+				return result, matchErr
 			}
 
 			if fileContent != nil && fileContent.SHA != nil {
@@ -947,7 +903,7 @@ func GetFileContents(t translations.TranslationHelperFunc) inventory.ServerTool 
 				pathParts := strings.Split(path, "/")
 				resourceURI, err := expandRepoResourceURI(owner, repo, sha, ref, pathParts)
 				if err != nil {
-					return utils.NewToolResultError("failed to build resource URI"), nil, nil
+					return utils.NewToolResultError("failed to build resource URI"), nil
 				}
 
 				// main branch ref passed in ref parameter but it doesn't exist - default branch was used
@@ -969,13 +925,13 @@ func GetFileContents(t translations.TranslationHelperFunc) inventory.ServerTool 
 					return utils.NewToolResultResourceLink(
 						fmt.Sprintf("File %s is too large to display (%d bytes). Use the download URL to fetch the content: %s (SHA: %s)%s",
 							path, fileSize, fileContent.GetDownloadURL(), fileSHA, successNote),
-						resourceLink), nil, nil
+						resourceLink), nil
 				}
 
 				// For files < 1MB, get content directly from Contents API
 				content, err := fileContent.GetContent()
 				if err != nil {
-					return utils.NewToolResultError(fmt.Sprintf("failed to decode file content: %s", err)), nil, nil
+					return utils.NewToolResultError(fmt.Sprintf("failed to decode file content: %s", err)), nil
 				}
 
 				// Detect content type from the actual content bytes,
@@ -997,7 +953,7 @@ func GetFileContents(t translations.TranslationHelperFunc) inventory.ServerTool 
 						Text:     content,
 						MIMEType: contentType,
 					}
-					return utils.NewToolResultResource(fmt.Sprintf("successfully downloaded text file (SHA: %s)%s", fileSHA, successNote), result), nil, nil
+					return utils.NewToolResultResource(fmt.Sprintf("successfully downloaded text file (SHA: %s)%s", fileSHA, successNote), result), nil
 				}
 
 				// Binary content - encode as base64 blob
@@ -1007,21 +963,17 @@ func GetFileContents(t translations.TranslationHelperFunc) inventory.ServerTool 
 					Blob:     []byte(blobContent),
 					MIMEType: contentType,
 				}
-				return utils.NewToolResultResource(fmt.Sprintf("successfully downloaded binary file (SHA: %s)%s", fileSHA, successNote), result), nil, nil
+				return utils.NewToolResultResource(fmt.Sprintf("successfully downloaded binary file (SHA: %s)%s", fileSHA, successNote), result), nil
 			} else if dirContent != nil {
 				// file content or file SHA is nil which means it's a directory
-				result := &GetFileContentsResult{
-					Type:      "directory",
-					Directory: dirContent,
-				}
 				r, err := json.Marshal(dirContent)
 				if err != nil {
-					return utils.NewToolResultError("failed to marshal response"), nil, nil
+					return utils.NewToolResultError("failed to marshal response"), nil
 				}
-				return utils.NewToolResultText(string(r)), result, nil
+				return utils.NewToolResultText(string(r)), nil
 			}
 
-			return utils.NewToolResultError("failed to get file contents"), nil, nil
+			return utils.NewToolResultError("failed to get file contents"), nil
 		},
 	)
 }
