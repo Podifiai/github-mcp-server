@@ -2129,3 +2129,139 @@ func TestWithInsidersMode_DoesNotMutateOriginalTools(t *testing.T) {
 	require.Equal(t, "data", tools[0].Tool.Meta["ui"], "original tool should not be mutated")
 	require.Equal(t, "kept", tools[0].Tool.Meta["description"], "original tool should not be mutated")
 }
+
+// mockOutput is a test type for structured content output.
+type mockOutput struct {
+	Value string `json:"value"`
+}
+
+func newTestServer() *mcp.Server {
+	return mcp.NewServer(&mcp.Implementation{
+		Name:    "test-server",
+		Version: "1.0",
+	}, nil)
+}
+
+func mockTypedToolWithOutput(name string, toolsetID string, output *mockOutput) ServerTool {
+	return NewServerToolWithContextHandler(
+		mcp.Tool{
+			Name:        name,
+			InputSchema: json.RawMessage(`{"type":"object","properties":{}}`),
+		},
+		testToolsetMetadata(toolsetID),
+		func(_ context.Context, _ *mcp.CallToolRequest, _ map[string]any) (*mcp.CallToolResult, *mockOutput, error) {
+			return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: "test"}}}, output, nil
+		},
+	)
+}
+
+func TestWithStructuredContent_Disabled_RegistersWithoutOutputSchema(t *testing.T) {
+	tool := mockTypedToolWithOutput("typed_tool", "repos", &mockOutput{Value: "hello"})
+	inv := mustBuild(t, NewBuilder().SetTools([]ServerTool{tool}).WithToolsets([]string{"all"}).WithStructuredContent(false))
+
+	require.False(t, inv.StructuredContent())
+
+	// Register with structured content disabled — should use s.AddTool (non-generic)
+	s := newTestServer()
+	inv.RegisterTools(context.Background(), s, nil)
+	// No panic = success. Tool is registered via the non-generic path.
+}
+
+func TestWithStructuredContent_Enabled_RegistersWithTypedPath(t *testing.T) {
+	tool := mockTypedToolWithOutput("typed_tool", "repos", &mockOutput{Value: "hello"})
+	inv := mustBuild(t, NewBuilder().SetTools([]ServerTool{tool}).WithToolsets([]string{"all"}).WithStructuredContent(true))
+
+	require.True(t, inv.StructuredContent())
+
+	// Register with structured content enabled — should use mcp.AddTool[In, Out] (generic)
+	s := newTestServer()
+	inv.RegisterTools(context.Background(), s, nil)
+	// No panic = success. Tool is registered via the typed path.
+}
+
+func TestWithStructuredContent_DefaultsToFalse(t *testing.T) {
+	inv := mustBuild(t, NewBuilder().WithToolsets([]string{"all"}))
+	require.False(t, inv.StructuredContent())
+}
+
+func TestWithStructuredContent_PreservedInForMCPRequest(t *testing.T) {
+	tool := mockTypedToolWithOutput("typed_tool", "repos", &mockOutput{Value: "hello"})
+	inv := mustBuild(t, NewBuilder().SetTools([]ServerTool{tool}).WithToolsets([]string{"all"}).WithStructuredContent(true))
+
+	filtered := inv.ForMCPRequest(MCPMethodToolsList, "")
+	require.True(t, filtered.StructuredContent(), "structuredContent should be preserved across ForMCPRequest")
+}
+
+func TestNewServerToolWithContextHandler_SetsTypedRegisterFunc(t *testing.T) {
+	st := NewServerToolWithContextHandler(
+		mcp.Tool{
+			Name:        "test",
+			InputSchema: json.RawMessage(`{"type":"object","properties":{}}`),
+		},
+		testToolsetMetadata("repos"),
+		func(_ context.Context, _ *mcp.CallToolRequest, _ map[string]any) (*mcp.CallToolResult, *mockOutput, error) {
+			return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: "test"}}}, &mockOutput{Value: "data"}, nil
+		},
+	)
+
+	require.NotNil(t, st.TypedRegisterFunc, "NewServerToolWithContextHandler should set TypedRegisterFunc")
+	require.NotNil(t, st.HandlerFunc, "NewServerToolWithContextHandler should set HandlerFunc")
+}
+
+func TestNewServerToolFromHandler_DoesNotSetTypedRegisterFunc(t *testing.T) {
+	st := NewServerToolFromHandler(
+		mcp.Tool{
+			Name:        "test",
+			InputSchema: json.RawMessage(`{"type":"object","properties":{}}`),
+		},
+		testToolsetMetadata("repos"),
+		func(_ any) mcp.ToolHandler {
+			return func(_ context.Context, _ *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+				return nil, nil
+			}
+		},
+	)
+
+	require.Nil(t, st.TypedRegisterFunc, "NewServerToolFromHandler should not set TypedRegisterFunc")
+}
+
+func TestRegisterFunc_StructuredContent_FallsBackWithoutTypedRegisterFunc(t *testing.T) {
+	// A tool without TypedRegisterFunc should fall back to standard registration
+	// even when structuredContent is true
+	tool := mockTool("basic_tool", "repos", true)
+	require.Nil(t, tool.TypedRegisterFunc)
+
+	s := newTestServer()
+	// Should not panic — falls back to non-generic registration
+	tool.RegisterFunc(s, nil, true)
+}
+
+func TestRegisterFunc_StructuredContentDisabled_IgnoresTypedRegisterFunc(t *testing.T) {
+	// Even when TypedRegisterFunc is set, it should not be called when
+	// structuredContent is false
+	typedCalled := false
+	tool := mockTypedToolWithOutput("typed_tool", "repos", &mockOutput{Value: "test"})
+	originalTypedFunc := tool.TypedRegisterFunc
+	tool.TypedRegisterFunc = func(s *mcp.Server) {
+		typedCalled = true
+		originalTypedFunc(s)
+	}
+
+	s := newTestServer()
+	tool.RegisterFunc(s, nil, false)
+	require.False(t, typedCalled, "TypedRegisterFunc should not be called when structuredContent is false")
+}
+
+func TestRegisterFunc_StructuredContentEnabled_CallsTypedRegisterFunc(t *testing.T) {
+	typedCalled := false
+	tool := mockTypedToolWithOutput("typed_tool", "repos", &mockOutput{Value: "test"})
+	originalTypedFunc := tool.TypedRegisterFunc
+	tool.TypedRegisterFunc = func(s *mcp.Server) {
+		typedCalled = true
+		originalTypedFunc(s)
+	}
+
+	s := newTestServer()
+	tool.RegisterFunc(s, nil, true)
+	require.True(t, typedCalled, "TypedRegisterFunc should be called when structuredContent is true")
+}

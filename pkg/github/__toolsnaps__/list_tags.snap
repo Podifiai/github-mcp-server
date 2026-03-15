@@ -32,5 +32,38 @@
     ],
     "type": "object"
   },
-  "name": "list_tags"
+  "name": "list_tags",
+  "outputSchema": {
+    "properties": {
+      "tags": {
+        "items": {
+          "properties": {
+            "commit": {
+              "properties": {
+                "sha": {
+                  "type": "string"
+                },
+                "url": {
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "name": {
+              "type": "string"
+            },
+            "tarball_url": {
+              "type": "string"
+            },
+            "zipball_url": {
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "type": "array"
+      }
+    },
+    "type": "object"
+  }
 }

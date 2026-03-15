@@ -26,5 +26,22 @@
     ],
     "type": "object"
   },
-  "name": "get_tag"
+  "name": "get_tag",
+  "outputSchema": {
+    "properties": {
+      "message": {
+        "type": "string"
+      },
+      "sha": {
+        "type": "string"
+      },
+      "tag": {
+        "type": "string"
+      },
+      "url": {
+        "type": "string"
+      }
+    },
+    "type": "object"
+  }
 }

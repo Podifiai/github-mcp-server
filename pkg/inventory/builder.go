@@ -49,6 +49,7 @@ type Builder struct {
 	filters              []ToolFilter // filters to apply to all tools
 	generateInstructions bool
 	insidersMode         bool
+	structuredContent    bool
 }
 
 // NewBuilder creates a new Builder.
@@ -150,6 +151,15 @@ func (b *Builder) WithInsidersMode(enabled bool) *Builder {
 	return b
 }
 
+// WithStructuredContent enables structured content mode.
+// When enabled, tools are registered using the generic mcp.AddTool[In, Out] path,
+// which populates OutputSchema and StructuredContent in tool results.
+// Returns self for chaining.
+func (b *Builder) WithStructuredContent(enabled bool) *Builder {
+	b.structuredContent = enabled
+	return b
+}
+
 // cleanTools trims whitespace and removes duplicates from tool names.
 // Empty strings after trimming are excluded.
 func cleanTools(tools []string) []string {
@@ -191,6 +201,7 @@ func (b *Builder) Build() (*Inventory, error) {
 		readOnly:          b.readOnly,
 		featureChecker:    b.featureChecker,
 		filters:           b.filters,
+		structuredContent: b.structuredContent,
 	}
 
 	// Process toolsets and pre-compute metadata in a single pass

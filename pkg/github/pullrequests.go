@@ -100,17 +100,14 @@ Possible options:
 
 			switch method {
 			case "get":
-				result, err := GetPullRequest(ctx, client, deps, owner, repo, pullNumber)
-				return result, nil, err
+				return GetPullRequest(ctx, client, deps, owner, repo, pullNumber)
 			case "get_diff":
 				result, err := GetPullRequestDiff(ctx, client, owner, repo, pullNumber)
 				return result, nil, err
 			case "get_status":
-				result, err := GetPullRequestStatus(ctx, client, owner, repo, pullNumber)
-				return result, nil, err
+				return GetPullRequestStatus(ctx, client, owner, repo, pullNumber)
 			case "get_files":
-				result, err := GetPullRequestFiles(ctx, client, owner, repo, pullNumber, pagination)
-				return result, nil, err
+				return GetPullRequestFiles(ctx, client, owner, repo, pullNumber, pagination)
 			case "get_review_comments":
 				gqlClient, err := deps.GetGQLClient(ctx)
 				if err != nil {
@@ -120,11 +117,9 @@ Possible options:
 				if err != nil {
 					return utils.NewToolResultError(err.Error()), nil, nil
 				}
-				result, err := GetPullRequestReviewComments(ctx, gqlClient, deps, owner, repo, pullNumber, cursorPagination)
-				return result, nil, err
+				return GetPullRequestReviewComments(ctx, gqlClient, deps, owner, repo, pullNumber, cursorPagination)
 			case "get_reviews":
-				result, err := GetPullRequestReviews(ctx, client, deps, owner, repo, pullNumber)
-				return result, nil, err
+				return GetPullRequestReviews(ctx, client, deps, owner, repo, pullNumber)
 			case "get_comments":
 				result, err := GetIssueComments(ctx, client, deps, owner, repo, pullNumber, pagination)
 				return result, nil, err
@@ -134,10 +129,10 @@ Possible options:
 		})
 }
 
-func GetPullRequest(ctx context.Context, client *github.Client, deps ToolDependencies, owner, repo string, pullNumber int) (*mcp.CallToolResult, error) {
+func GetPullRequest(ctx context.Context, client *github.Client, deps ToolDependencies, owner, repo string, pullNumber int) (*mcp.CallToolResult, *github.PullRequest, error) {
 	cache, err := deps.GetRepoAccessCache(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get repo access cache: %w", err)
+		return nil, nil, fmt.Errorf("failed to get repo access cache: %w", err)
 	}
 	ff := deps.GetFlags(ctx)
 
@@ -147,16 +142,16 @@ func GetPullRequest(ctx context.Context, client *github.Client, deps ToolDepende
 			"failed to get pull request",
 			resp,
 			err,
-		), nil
+		), nil, nil
 	}
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {
-			return nil, fmt.Errorf("failed to read response body: %w", err)
+			return nil, nil, fmt.Errorf("failed to read response body: %w", err)
 		}
-		return ghErrors.NewGitHubAPIStatusErrorResponse(ctx, "failed to get pull request", resp, body), nil
+		return ghErrors.NewGitHubAPIStatusErrorResponse(ctx, "failed to get pull request", resp, body), nil, nil
 	}
 
 	// sanitize title/body on response
@@ -171,27 +166,27 @@ func GetPullRequest(ctx context.Context, client *github.Client, deps ToolDepende
 
 	if ff.LockdownMode {
 		if cache == nil {
-			return nil, fmt.Errorf("lockdown cache is not configured")
+			return nil, nil, fmt.Errorf("lockdown cache is not configured")
 		}
 		login := pr.GetUser().GetLogin()
 		if login != "" {
 			isSafeContent, err := cache.IsSafeContent(ctx, login, owner, repo)
 			if err != nil {
-				return nil, fmt.Errorf("failed to check content removal: %w", err)
+				return nil, nil, fmt.Errorf("failed to check content removal: %w", err)
 			}
 
 			if !isSafeContent {
-				return utils.NewToolResultError("access to pull request is restricted by lockdown mode"), nil
+				return utils.NewToolResultError("access to pull request is restricted by lockdown mode"), nil, nil
 			}
 		}
 	}
 
 	r, err := json.Marshal(pr)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal response: %w", err)
+		return nil, nil, fmt.Errorf("failed to marshal response: %w", err)
 	}
 
-	return utils.NewToolResultText(string(r)), nil
+	return utils.NewToolResultText(string(r)), pr, nil
 }
 
 func GetPullRequestDiff(ctx context.Context, client *github.Client, owner, repo string, pullNumber int) (*mcp.CallToolResult, error) {
@@ -224,23 +219,23 @@ func GetPullRequestDiff(ctx context.Context, client *github.Client, owner, repo 
 	return utils.NewToolResultText(string(raw)), nil
 }
 
-func GetPullRequestStatus(ctx context.Context, client *github.Client, owner, repo string, pullNumber int) (*mcp.CallToolResult, error) {
+func GetPullRequestStatus(ctx context.Context, client *github.Client, owner, repo string, pullNumber int) (*mcp.CallToolResult, *github.CombinedStatus, error) {
 	pr, resp, err := client.PullRequests.Get(ctx, owner, repo, pullNumber)
 	if err != nil {
 		return ghErrors.NewGitHubAPIErrorResponse(ctx,
 			"failed to get pull request",
 			resp,
 			err,
-		), nil
+		), nil, nil
 	}
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {
-			return nil, fmt.Errorf("failed to read response body: %w", err)
+			return nil, nil, fmt.Errorf("failed to read response body: %w", err)
 		}
-		return ghErrors.NewGitHubAPIStatusErrorResponse(ctx, "failed to get pull request", resp, body), nil
+		return ghErrors.NewGitHubAPIStatusErrorResponse(ctx, "failed to get pull request", resp, body), nil, nil
 	}
 
 	// Get combined status for the head SHA
@@ -250,27 +245,27 @@ func GetPullRequestStatus(ctx context.Context, client *github.Client, owner, rep
 			"failed to get combined status",
 			resp,
 			err,
-		), nil
+		), nil, nil
 	}
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {
-			return nil, fmt.Errorf("failed to read response body: %w", err)
+			return nil, nil, fmt.Errorf("failed to read response body: %w", err)
 		}
-		return ghErrors.NewGitHubAPIStatusErrorResponse(ctx, "failed to get combined status", resp, body), nil
+		return ghErrors.NewGitHubAPIStatusErrorResponse(ctx, "failed to get combined status", resp, body), nil, nil
 	}
 
 	r, err := json.Marshal(status)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal response: %w", err)
+		return nil, nil, fmt.Errorf("failed to marshal response: %w", err)
 	}
 
-	return utils.NewToolResultText(string(r)), nil
+	return utils.NewToolResultText(string(r)), status, nil
 }
 
-func GetPullRequestFiles(ctx context.Context, client *github.Client, owner, repo string, pullNumber int, pagination PaginationParams) (*mcp.CallToolResult, error) {
+func GetPullRequestFiles(ctx context.Context, client *github.Client, owner, repo string, pullNumber int, pagination PaginationParams) (*mcp.CallToolResult, []*github.CommitFile, error) {
 	opts := &github.ListOptions{
 		PerPage: pagination.PerPage,
 		Page:    pagination.Page,
@@ -281,24 +276,24 @@ func GetPullRequestFiles(ctx context.Context, client *github.Client, owner, repo
 			"failed to get pull request files",
 			resp,
 			err,
-		), nil
+		), nil, nil
 	}
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {
-			return nil, fmt.Errorf("failed to read response body: %w", err)
+			return nil, nil, fmt.Errorf("failed to read response body: %w", err)
 		}
-		return ghErrors.NewGitHubAPIStatusErrorResponse(ctx, "failed to get pull request files", resp, body), nil
+		return ghErrors.NewGitHubAPIStatusErrorResponse(ctx, "failed to get pull request files", resp, body), nil, nil
 	}
 
 	r, err := json.Marshal(files)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal response: %w", err)
+		return nil, nil, fmt.Errorf("failed to marshal response: %w", err)
 	}
 
-	return utils.NewToolResultText(string(r)), nil
+	return utils.NewToolResultText(string(r)), files, nil
 }
 
 // GraphQL types for review threads query
@@ -345,17 +340,17 @@ type pageInfoFragment struct {
 	EndCursor       githubv4.String
 }
 
-func GetPullRequestReviewComments(ctx context.Context, gqlClient *githubv4.Client, deps ToolDependencies, owner, repo string, pullNumber int, pagination CursorPaginationParams) (*mcp.CallToolResult, error) {
+func GetPullRequestReviewComments(ctx context.Context, gqlClient *githubv4.Client, deps ToolDependencies, owner, repo string, pullNumber int, pagination CursorPaginationParams) (*mcp.CallToolResult, map[string]any, error) {
 	cache, err := deps.GetRepoAccessCache(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get repo access cache: %w", err)
+		return nil, nil, fmt.Errorf("failed to get repo access cache: %w", err)
 	}
 	ff := deps.GetFlags(ctx)
 
 	// Convert pagination parameters to GraphQL format
 	gqlParams, err := pagination.ToGraphQLParams()
 	if err != nil {
-		return utils.NewToolResultError(fmt.Sprintf("invalid pagination parameters: %v", err)), nil
+		return utils.NewToolResultError(fmt.Sprintf("invalid pagination parameters: %v", err)), nil, nil
 	}
 
 	// Build variables for GraphQL query
@@ -380,13 +375,13 @@ func GetPullRequestReviewComments(ctx context.Context, gqlClient *githubv4.Clien
 		return ghErrors.NewGitHubGraphQLErrorResponse(ctx,
 			"failed to get pull request review threads",
 			err,
-		), nil
+		), nil, nil
 	}
 
 	// Lockdown mode filtering
 	if ff.LockdownMode {
 		if cache == nil {
-			return nil, fmt.Errorf("lockdown cache is not configured")
+			return nil, nil, fmt.Errorf("lockdown cache is not configured")
 		}
 
 		// Iterate through threads and filter comments
@@ -399,7 +394,7 @@ func GetPullRequestReviewComments(ctx context.Context, gqlClient *githubv4.Clien
 				if login != "" {
 					isSafeContent, err := cache.IsSafeContent(ctx, login, owner, repo)
 					if err != nil {
-						return nil, fmt.Errorf("failed to check lockdown mode: %w", err)
+						return nil, nil, fmt.Errorf("failed to check lockdown mode: %w", err)
 					}
 					if isSafeContent {
 						filteredComments = append(filteredComments, comment)
@@ -426,16 +421,16 @@ func GetPullRequestReviewComments(ctx context.Context, gqlClient *githubv4.Clien
 
 	r, err := json.Marshal(response)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal response: %w", err)
+		return nil, nil, fmt.Errorf("failed to marshal response: %w", err)
 	}
 
-	return utils.NewToolResultText(string(r)), nil
+	return utils.NewToolResultText(string(r)), response, nil
 }
 
-func GetPullRequestReviews(ctx context.Context, client *github.Client, deps ToolDependencies, owner, repo string, pullNumber int) (*mcp.CallToolResult, error) {
+func GetPullRequestReviews(ctx context.Context, client *github.Client, deps ToolDependencies, owner, repo string, pullNumber int) (*mcp.CallToolResult, []*github.PullRequestReview, error) {
 	cache, err := deps.GetRepoAccessCache(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get repo access cache: %w", err)
+		return nil, nil, fmt.Errorf("failed to get repo access cache: %w", err)
 	}
 	ff := deps.GetFlags(ctx)
 
@@ -445,21 +440,21 @@ func GetPullRequestReviews(ctx context.Context, client *github.Client, deps Tool
 			"failed to get pull request reviews",
 			resp,
 			err,
-		), nil
+		), nil, nil
 	}
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {
-			return nil, fmt.Errorf("failed to read response body: %w", err)
+			return nil, nil, fmt.Errorf("failed to read response body: %w", err)
 		}
-		return ghErrors.NewGitHubAPIStatusErrorResponse(ctx, "failed to get pull request reviews", resp, body), nil
+		return ghErrors.NewGitHubAPIStatusErrorResponse(ctx, "failed to get pull request reviews", resp, body), nil, nil
 	}
 
 	if ff.LockdownMode {
 		if cache == nil {
-			return nil, fmt.Errorf("lockdown cache is not configured")
+			return nil, nil, fmt.Errorf("lockdown cache is not configured")
 		}
 		filteredReviews := make([]*github.PullRequestReview, 0, len(reviews))
 		for _, review := range reviews {
@@ -467,7 +462,7 @@ func GetPullRequestReviews(ctx context.Context, client *github.Client, deps Tool
 			if login != "" {
 				isSafeContent, err := cache.IsSafeContent(ctx, login, owner, repo)
 				if err != nil {
-					return nil, fmt.Errorf("failed to check lockdown mode: %w", err)
+					return nil, nil, fmt.Errorf("failed to check lockdown mode: %w", err)
 				}
 				if isSafeContent {
 					filteredReviews = append(filteredReviews, review)
@@ -479,10 +474,10 @@ func GetPullRequestReviews(ctx context.Context, client *github.Client, deps Tool
 
 	r, err := json.Marshal(reviews)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal response: %w", err)
+		return nil, nil, fmt.Errorf("failed to marshal response: %w", err)
 	}
 
-	return utils.NewToolResultText(string(r)), nil
+	return utils.NewToolResultText(string(r)), reviews, nil
 }
 
 // PullRequestWriteUIResourceURI is the URI for the create_pull_request tool's MCP App UI resource.
@@ -545,7 +540,7 @@ func CreatePullRequest(t translations.TranslationHelperFunc) inventory.ServerToo
 			},
 		},
 		[]scopes.Scope{scopes.Repo},
-		func(ctx context.Context, deps ToolDependencies, req *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, req *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *MinimalResponse, error) {
 			owner, err := RequiredParam[string](args, "owner")
 			if err != nil {
 				return utils.NewToolResultError(err.Error()), nil, nil
@@ -648,7 +643,7 @@ func CreatePullRequest(t translations.TranslationHelperFunc) inventory.ServerToo
 				return utils.NewToolResultErrorFromErr("failed to marshal response", err), nil, nil
 			}
 
-			return utils.NewToolResultText(string(r)), nil, nil
+			return utils.NewToolResultText(string(r)), &minimalResponse, nil
 		})
 }
 
@@ -717,7 +712,7 @@ func UpdatePullRequest(t translations.TranslationHelperFunc) inventory.ServerToo
 			InputSchema: schema,
 		},
 		[]scopes.Scope{scopes.Repo},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *MinimalResponse, error) {
 			owner, err := RequiredParam[string](args, "owner")
 			if err != nil {
 				return utils.NewToolResultError(err.Error()), nil, nil
@@ -942,7 +937,7 @@ func UpdatePullRequest(t translations.TranslationHelperFunc) inventory.ServerToo
 				return utils.NewToolResultErrorFromErr("Failed to marshal response", err), nil, nil
 			}
 
-			return utils.NewToolResultText(string(r)), nil, nil
+			return utils.NewToolResultText(string(r)), &minimalResponse, nil
 		})
 }
 
@@ -985,9 +980,29 @@ func AddReplyToPullRequestComment(t translations.TranslationHelperFunc) inventor
 				ReadOnlyHint: false,
 			},
 			InputSchema: schema,
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"id":         {Type: "integer"},
+					"html_url":   {Type: "string"},
+					"body":       {Type: "string"},
+					"path":       {Type: "string"},
+					"line":       {Type: "integer"},
+					"created_at": {Type: "string"},
+					"user": {
+						Type: "object",
+						Properties: map[string]*jsonschema.Schema{
+							"login":      {Type: "string"},
+							"id":         {Type: "integer"},
+							"avatar_url": {Type: "string"},
+							"html_url":   {Type: "string"},
+						},
+					},
+				},
+			},
 		},
 		[]scopes.Scope{scopes.Repo},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *github.PullRequestComment, error) {
 			owner, err := RequiredParam[string](args, "owner")
 			if err != nil {
 				return utils.NewToolResultError(err.Error()), nil, nil
@@ -1033,8 +1048,13 @@ func AddReplyToPullRequestComment(t translations.TranslationHelperFunc) inventor
 				return utils.NewToolResultErrorFromErr("failed to marshal response", err), nil, nil
 			}
 
-			return utils.NewToolResultText(string(r)), nil, nil
+			return utils.NewToolResultText(string(r)), comment, nil
 		})
+}
+
+// ListPullRequestsResult wraps the slice return for structured content output schema compatibility.
+type ListPullRequestsResult struct {
+	PullRequests []*github.PullRequest `json:"pull_requests"`
 }
 
 // ListPullRequests creates a tool to list and filter repository pull requests.
@@ -1088,9 +1108,54 @@ func ListPullRequests(t translations.TranslationHelperFunc) inventory.ServerTool
 				ReadOnlyHint: true,
 			},
 			InputSchema: schema,
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"pull_requests": {
+						Type: "array",
+						Items: &jsonschema.Schema{
+							Type: "object",
+							Properties: map[string]*jsonschema.Schema{
+								"number":     {Type: "integer"},
+								"title":      {Type: "string"},
+								"state":      {Type: "string"},
+								"html_url":   {Type: "string"},
+								"body":       {Type: "string"},
+								"draft":      {Type: "boolean"},
+								"merged":     {Type: "boolean"},
+								"created_at": {Type: "string"},
+								"updated_at": {Type: "string"},
+								"user": {
+									Type: "object",
+									Properties: map[string]*jsonschema.Schema{
+										"login":      {Type: "string"},
+										"id":         {Type: "integer"},
+										"avatar_url": {Type: "string"},
+										"html_url":   {Type: "string"},
+									},
+								},
+								"head": {
+									Type: "object",
+									Properties: map[string]*jsonschema.Schema{
+										"ref": {Type: "string"},
+										"sha": {Type: "string"},
+									},
+								},
+								"base": {
+									Type: "object",
+									Properties: map[string]*jsonschema.Schema{
+										"ref": {Type: "string"},
+										"sha": {Type: "string"},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
 		},
 		[]scopes.Scope{scopes.Repo},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *ListPullRequestsResult, error) {
 			owner, err := RequiredParam[string](args, "owner")
 			if err != nil {
 				return utils.NewToolResultError(err.Error()), nil, nil
@@ -1176,7 +1241,7 @@ func ListPullRequests(t translations.TranslationHelperFunc) inventory.ServerTool
 				return utils.NewToolResultErrorFromErr("failed to marshal response", err), nil, nil
 			}
 
-			return utils.NewToolResultText(string(r)), nil, nil
+			return utils.NewToolResultText(string(r)), &ListPullRequestsResult{PullRequests: prs}, nil
 		})
 }
 
@@ -1225,9 +1290,17 @@ func MergePullRequest(t translations.TranslationHelperFunc) inventory.ServerTool
 				ReadOnlyHint: false,
 			},
 			InputSchema: schema,
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"sha":     {Type: "string"},
+					"merged":  {Type: "boolean"},
+					"message": {Type: "string"},
+				},
+			},
 		},
 		[]scopes.Scope{scopes.Repo},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *github.PullRequestMergeResult, error) {
 			owner, err := RequiredParam[string](args, "owner")
 			if err != nil {
 				return utils.NewToolResultError(err.Error()), nil, nil
@@ -1285,7 +1358,7 @@ func MergePullRequest(t translations.TranslationHelperFunc) inventory.ServerTool
 				return utils.NewToolResultErrorFromErr("failed to marshal response", err), nil, nil
 			}
 
-			return utils.NewToolResultText(string(r)), nil, nil
+			return utils.NewToolResultText(string(r)), result, nil
 		})
 }
 
@@ -1386,9 +1459,16 @@ func UpdatePullRequestBranch(t translations.TranslationHelperFunc) inventory.Ser
 				ReadOnlyHint: false,
 			},
 			InputSchema: schema,
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"message": {Type: "string"},
+					"url":     {Type: "string"},
+				},
+			},
 		},
 		[]scopes.Scope{scopes.Repo},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *github.PullRequestBranchUpdateResponse, error) {
 			owner, err := RequiredParam[string](args, "owner")
 			if err != nil {
 				return utils.NewToolResultError(err.Error()), nil, nil
@@ -1442,7 +1522,7 @@ func UpdatePullRequestBranch(t translations.TranslationHelperFunc) inventory.Ser
 				return utils.NewToolResultErrorFromErr("failed to marshal response", err), nil, nil
 			}
 
-			return utils.NewToolResultText(string(r)), nil, nil
+			return utils.NewToolResultText(string(r)), result, nil
 		})
 }
 

@@ -261,7 +261,7 @@ func SearchCode(t translations.TranslationHelperFunc) inventory.ServerTool {
 	)
 }
 
-func userOrOrgHandler(ctx context.Context, accountType string, deps ToolDependencies, args map[string]any) (*mcp.CallToolResult, any, error) {
+func userOrOrgHandler(ctx context.Context, accountType string, deps ToolDependencies, args map[string]any) (*mcp.CallToolResult, *MinimalSearchUsersResult, error) {
 	query, err := RequiredParam[string](args, "query")
 	if err != nil {
 		return utils.NewToolResultError(err.Error()), nil, nil
@@ -344,7 +344,7 @@ func userOrOrgHandler(ctx context.Context, accountType string, deps ToolDependen
 	if err != nil {
 		return utils.NewToolResultErrorFromErr("failed to marshal response", err), nil, nil
 	}
-	return utils.NewToolResultText(string(r)), nil, nil
+	return utils.NewToolResultText(string(r)), minimalResp, nil
 }
 
 // SearchUsers creates a tool to search for GitHub users.
@@ -383,7 +383,7 @@ func SearchUsers(t translations.TranslationHelperFunc) inventory.ServerTool {
 			InputSchema: schema,
 		},
 		[]scopes.Scope{scopes.Repo},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *MinimalSearchUsersResult, error) {
 			return userOrOrgHandler(ctx, "user", deps, args)
 		},
 	)
@@ -425,7 +425,7 @@ func SearchOrgs(t translations.TranslationHelperFunc) inventory.ServerTool {
 			InputSchema: schema,
 		},
 		[]scopes.Scope{scopes.ReadOrg},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *MinimalSearchUsersResult, error) {
 			return userOrOrgHandler(ctx, "org", deps, args)
 		},
 	)

@@ -56,7 +56,7 @@ func GetCommit(t translations.TranslationHelperFunc) inventory.ServerTool {
 			}),
 		},
 		[]scopes.Scope{scopes.Repo},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *MinimalCommit, error) {
 			owner, err := RequiredParam[string](args, "owner")
 			if err != nil {
 				return utils.NewToolResultError(err.Error()), nil, nil
@@ -113,9 +113,15 @@ func GetCommit(t translations.TranslationHelperFunc) inventory.ServerTool {
 				return nil, nil, fmt.Errorf("failed to marshal response: %w", err)
 			}
 
-			return utils.NewToolResultText(string(r)), nil, nil
+			return utils.NewToolResultText(string(r)), &minimalCommit, nil
 		},
 	)
+}
+
+// ListCommitsResult wraps the slice return for structured content compatibility.
+// The SDK requires Out types to produce object schemas; slices produce array schemas.
+type ListCommitsResult struct {
+	Commits []MinimalCommit `json:"commits"`
 }
 
 // ListCommits creates a tool to get commits of a branch in a repository.
@@ -153,7 +159,7 @@ func ListCommits(t translations.TranslationHelperFunc) inventory.ServerTool {
 			}),
 		},
 		[]scopes.Scope{scopes.Repo},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *ListCommitsResult, error) {
 			owner, err := RequiredParam[string](args, "owner")
 			if err != nil {
 				return utils.NewToolResultError(err.Error()), nil, nil
@@ -221,9 +227,15 @@ func ListCommits(t translations.TranslationHelperFunc) inventory.ServerTool {
 				return nil, nil, fmt.Errorf("failed to marshal response: %w", err)
 			}
 
-			return utils.NewToolResultText(string(r)), nil, nil
+			return utils.NewToolResultText(string(r)), &ListCommitsResult{Commits: minimalCommits}, nil
 		},
 	)
+}
+
+// ListBranchesResult wraps the slice return for structured content compatibility.
+// The SDK requires Out types to produce object schemas; slices produce array schemas.
+type ListBranchesResult struct {
+	Branches []MinimalBranch `json:"branches"`
 }
 
 // ListBranches creates a tool to list branches in a GitHub repository.
@@ -253,7 +265,7 @@ func ListBranches(t translations.TranslationHelperFunc) inventory.ServerTool {
 			}),
 		},
 		[]scopes.Scope{scopes.Repo},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *ListBranchesResult, error) {
 			owner, err := RequiredParam[string](args, "owner")
 			if err != nil {
 				return utils.NewToolResultError(err.Error()), nil, nil
@@ -308,7 +320,7 @@ func ListBranches(t translations.TranslationHelperFunc) inventory.ServerTool {
 				return nil, nil, fmt.Errorf("failed to marshal response: %w", err)
 			}
 
-			return utils.NewToolResultText(string(r)), nil, nil
+			return utils.NewToolResultText(string(r)), &ListBranchesResult{Branches: minimalBranches}, nil
 		},
 	)
 }
@@ -365,9 +377,31 @@ If the SHA is not provided, the tool will attempt to acquire it by fetching the 
 				},
 				Required: []string{"owner", "repo", "path", "content", "message", "branch"},
 			},
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"content": {
+						Type: "object",
+						Properties: map[string]*jsonschema.Schema{
+							"name":     {Type: "string"},
+							"path":     {Type: "string"},
+							"sha":      {Type: "string"},
+							"html_url": {Type: "string"},
+						},
+					},
+					"commit": {
+						Type: "object",
+						Properties: map[string]*jsonschema.Schema{
+							"sha":      {Type: "string"},
+							"html_url": {Type: "string"},
+							"message":  {Type: "string"},
+						},
+					},
+				},
+			},
 		},
 		[]scopes.Scope{scopes.Repo},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *github.RepositoryContentResponse, error) {
 			owner, err := RequiredParam[string](args, "owner")
 			if err != nil {
 				return utils.NewToolResultError(err.Error()), nil, nil
@@ -498,16 +532,16 @@ If the SHA is not provided, the tool will attempt to acquire it by fetching the 
 			if sha == "" && previousSHA != "" {
 				return utils.NewToolResultText(fmt.Sprintf(
 					"Warning: File updated without SHA validation. Previous file SHA was %s. "+
-						`Verify no unintended changes were overwritten: 
+						`Verify no unintended changes were overwritten:
 1. Extract the SHA of the local version using git ls-tree HEAD %s.
 2. Compare with the previous SHA above.
 3. Revert changes if shas do not match.
 
 %s`,
-					previousSHA, path, string(r))), nil, nil
+					previousSHA, path, string(r))), fileContent, nil
 			}
 
-			return utils.NewToolResultText(string(r)), nil, nil
+			return utils.NewToolResultText(string(r)), fileContent, nil
 		},
 	)
 }
@@ -551,7 +585,7 @@ func CreateRepository(t translations.TranslationHelperFunc) inventory.ServerTool
 			},
 		},
 		[]scopes.Scope{scopes.Repo},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *MinimalResponse, error) {
 			name, err := RequiredParam[string](args, "name")
 			if err != nil {
 				return utils.NewToolResultError(err.Error()), nil, nil
@@ -613,7 +647,7 @@ func CreateRepository(t translations.TranslationHelperFunc) inventory.ServerTool
 				return nil, nil, fmt.Errorf("failed to marshal response: %w", err)
 			}
 
-			return utils.NewToolResultText(string(r)), nil, nil
+			return utils.NewToolResultText(string(r)), &minimalResponse, nil
 		},
 	)
 }
@@ -788,7 +822,7 @@ func GetFileContents(t translations.TranslationHelperFunc) inventory.ServerTool 
 				if err != nil {
 					return utils.NewToolResultError("failed to marshal response"), nil, nil
 				}
-				return utils.NewToolResultText(string(r)), nil, nil
+				return utils.NewToolResultText(string(r)), dirContent, nil
 			}
 
 			return utils.NewToolResultError("failed to get file contents"), nil, nil
@@ -828,7 +862,7 @@ func ForkRepository(t translations.TranslationHelperFunc) inventory.ServerTool {
 			},
 		},
 		[]scopes.Scope{scopes.Repo},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *MinimalResponse, error) {
 			owner, err := RequiredParam[string](args, "owner")
 			if err != nil {
 				return utils.NewToolResultError(err.Error()), nil, nil
@@ -885,7 +919,7 @@ func ForkRepository(t translations.TranslationHelperFunc) inventory.ServerTool {
 				return nil, nil, fmt.Errorf("failed to marshal response: %w", err)
 			}
 
-			return utils.NewToolResultText(string(r)), nil, nil
+			return utils.NewToolResultText(string(r)), &minimalResponse, nil
 		},
 	)
 }
@@ -1075,7 +1109,7 @@ func DeleteFile(t translations.TranslationHelperFunc) inventory.ServerTool {
 				return nil, nil, fmt.Errorf("failed to marshal response: %w", err)
 			}
 
-			return utils.NewToolResultText(string(r)), nil, nil
+			return utils.NewToolResultText(string(r)), response, nil
 		},
 	)
 }
@@ -1113,9 +1147,24 @@ func CreateBranch(t translations.TranslationHelperFunc) inventory.ServerTool {
 				},
 				Required: []string{"owner", "repo", "branch"},
 			},
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"ref": {Type: "string"},
+					"url": {Type: "string"},
+					"object": {
+						Type: "object",
+						Properties: map[string]*jsonschema.Schema{
+							"sha":  {Type: "string"},
+							"type": {Type: "string"},
+							"url":  {Type: "string"},
+						},
+					},
+				},
+			},
 		},
 		[]scopes.Scope{scopes.Repo},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *github.Reference, error) {
 			owner, err := RequiredParam[string](args, "owner")
 			if err != nil {
 				return utils.NewToolResultError(err.Error()), nil, nil
@@ -1188,7 +1237,7 @@ func CreateBranch(t translations.TranslationHelperFunc) inventory.ServerTool {
 				return nil, nil, fmt.Errorf("failed to marshal response: %w", err)
 			}
 
-			return utils.NewToolResultText(string(r)), nil, nil
+			return utils.NewToolResultText(string(r)), createdRef, nil
 		},
 	)
 }
@@ -1244,9 +1293,24 @@ func PushFiles(t translations.TranslationHelperFunc) inventory.ServerTool {
 				},
 				Required: []string{"owner", "repo", "branch", "files", "message"},
 			},
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"ref": {Type: "string"},
+					"url": {Type: "string"},
+					"object": {
+						Type: "object",
+						Properties: map[string]*jsonschema.Schema{
+							"sha":  {Type: "string"},
+							"type": {Type: "string"},
+							"url":  {Type: "string"},
+						},
+					},
+				},
+			},
 		},
 		[]scopes.Scope{scopes.Repo},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *github.Reference, error) {
 			owner, err := RequiredParam[string](args, "owner")
 			if err != nil {
 				return utils.NewToolResultError(err.Error()), nil, nil
@@ -1422,9 +1486,14 @@ func PushFiles(t translations.TranslationHelperFunc) inventory.ServerTool {
 				return nil, nil, fmt.Errorf("failed to marshal response: %w", err)
 			}
 
-			return utils.NewToolResultText(string(r)), nil, nil
+			return utils.NewToolResultText(string(r)), updatedRef, nil
 		},
 	)
+}
+
+// ListTagsResult wraps the slice return for structured content output schema compatibility.
+type ListTagsResult struct {
+	Tags []*github.RepositoryTag `json:"tags"`
 }
 
 // ListTags creates a tool to list tags in a GitHub repository.
@@ -1452,9 +1521,32 @@ func ListTags(t translations.TranslationHelperFunc) inventory.ServerTool {
 				},
 				Required: []string{"owner", "repo"},
 			}),
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"tags": {
+						Type: "array",
+						Items: &jsonschema.Schema{
+							Type: "object",
+							Properties: map[string]*jsonschema.Schema{
+								"name": {Type: "string"},
+								"commit": {
+									Type: "object",
+									Properties: map[string]*jsonschema.Schema{
+										"sha": {Type: "string"},
+										"url": {Type: "string"},
+									},
+								},
+								"zipball_url": {Type: "string"},
+								"tarball_url": {Type: "string"},
+							},
+						},
+					},
+				},
+			},
 		},
 		[]scopes.Scope{scopes.Repo},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *ListTagsResult, error) {
 			owner, err := RequiredParam[string](args, "owner")
 			if err != nil {
 				return utils.NewToolResultError(err.Error()), nil, nil
@@ -1501,7 +1593,7 @@ func ListTags(t translations.TranslationHelperFunc) inventory.ServerTool {
 				return nil, nil, fmt.Errorf("failed to marshal response: %w", err)
 			}
 
-			return utils.NewToolResultText(string(r)), nil, nil
+			return utils.NewToolResultText(string(r)), &ListTagsResult{Tags: tags}, nil
 		},
 	)
 }
@@ -1535,9 +1627,18 @@ func GetTag(t translations.TranslationHelperFunc) inventory.ServerTool {
 				},
 				Required: []string{"owner", "repo", "tag"},
 			},
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"tag":     {Type: "string"},
+					"sha":     {Type: "string"},
+					"message": {Type: "string"},
+					"url":     {Type: "string"},
+				},
+			},
 		},
 		[]scopes.Scope{scopes.Repo},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *github.Tag, error) {
 			owner, err := RequiredParam[string](args, "owner")
 			if err != nil {
 				return utils.NewToolResultError(err.Error()), nil, nil
@@ -1599,9 +1700,14 @@ func GetTag(t translations.TranslationHelperFunc) inventory.ServerTool {
 				return nil, nil, fmt.Errorf("failed to marshal response: %w", err)
 			}
 
-			return utils.NewToolResultText(string(r)), nil, nil
+			return utils.NewToolResultText(string(r)), tagObj, nil
 		},
 	)
+}
+
+// ListReleasesResult wraps the slice return for structured content output schema compatibility.
+type ListReleasesResult struct {
+	Releases []*github.RepositoryRelease `json:"releases"`
 }
 
 // ListReleases creates a tool to list releases in a GitHub repository.
@@ -1629,9 +1735,39 @@ func ListReleases(t translations.TranslationHelperFunc) inventory.ServerTool {
 				},
 				Required: []string{"owner", "repo"},
 			}),
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"releases": {
+						Type: "array",
+						Items: &jsonschema.Schema{
+							Type: "object",
+							Properties: map[string]*jsonschema.Schema{
+								"id":           {Type: "integer"},
+								"tag_name":     {Type: "string"},
+								"name":         {Type: "string"},
+								"body":         {Type: "string"},
+								"html_url":     {Type: "string"},
+								"published_at": {Type: "string"},
+								"prerelease":   {Type: "boolean"},
+								"draft":        {Type: "boolean"},
+								"author": {
+									Type: "object",
+									Properties: map[string]*jsonschema.Schema{
+										"login":      {Type: "string"},
+										"id":         {Type: "integer"},
+										"avatar_url": {Type: "string"},
+										"html_url":   {Type: "string"},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
 		},
 		[]scopes.Scope{scopes.Repo},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *ListReleasesResult, error) {
 			owner, err := RequiredParam[string](args, "owner")
 			if err != nil {
 				return utils.NewToolResultError(err.Error()), nil, nil
@@ -1674,7 +1810,7 @@ func ListReleases(t translations.TranslationHelperFunc) inventory.ServerTool {
 				return nil, nil, fmt.Errorf("failed to marshal response: %w", err)
 			}
 
-			return utils.NewToolResultText(string(r)), nil, nil
+			return utils.NewToolResultText(string(r)), &ListReleasesResult{Releases: releases}, nil
 		},
 	)
 }
@@ -1704,9 +1840,31 @@ func GetLatestRelease(t translations.TranslationHelperFunc) inventory.ServerTool
 				},
 				Required: []string{"owner", "repo"},
 			},
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"id":           {Type: "integer"},
+					"tag_name":     {Type: "string"},
+					"name":         {Type: "string"},
+					"body":         {Type: "string"},
+					"html_url":     {Type: "string"},
+					"published_at": {Type: "string"},
+					"prerelease":   {Type: "boolean"},
+					"draft":        {Type: "boolean"},
+					"author": {
+						Type: "object",
+						Properties: map[string]*jsonschema.Schema{
+							"login":      {Type: "string"},
+							"id":         {Type: "integer"},
+							"avatar_url": {Type: "string"},
+							"html_url":   {Type: "string"},
+						},
+					},
+				},
+			},
 		},
 		[]scopes.Scope{scopes.Repo},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *github.RepositoryRelease, error) {
 			owner, err := RequiredParam[string](args, "owner")
 			if err != nil {
 				return utils.NewToolResultError(err.Error()), nil, nil
@@ -1740,7 +1898,7 @@ func GetLatestRelease(t translations.TranslationHelperFunc) inventory.ServerTool
 				return nil, nil, fmt.Errorf("failed to marshal response: %w", err)
 			}
 
-			return utils.NewToolResultText(string(r)), nil, nil
+			return utils.NewToolResultText(string(r)), release, nil
 		},
 	)
 }
@@ -1773,9 +1931,31 @@ func GetReleaseByTag(t translations.TranslationHelperFunc) inventory.ServerTool 
 				},
 				Required: []string{"owner", "repo", "tag"},
 			},
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"id":           {Type: "integer"},
+					"tag_name":     {Type: "string"},
+					"name":         {Type: "string"},
+					"body":         {Type: "string"},
+					"html_url":     {Type: "string"},
+					"published_at": {Type: "string"},
+					"prerelease":   {Type: "boolean"},
+					"draft":        {Type: "boolean"},
+					"author": {
+						Type: "object",
+						Properties: map[string]*jsonschema.Schema{
+							"login":      {Type: "string"},
+							"id":         {Type: "integer"},
+							"avatar_url": {Type: "string"},
+							"html_url":   {Type: "string"},
+						},
+					},
+				},
+			},
 		},
 		[]scopes.Scope{scopes.Repo},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *github.RepositoryRelease, error) {
 			owner, err := RequiredParam[string](args, "owner")
 			if err != nil {
 				return utils.NewToolResultError(err.Error()), nil, nil
@@ -1817,7 +1997,7 @@ func GetReleaseByTag(t translations.TranslationHelperFunc) inventory.ServerTool 
 				return nil, nil, fmt.Errorf("failed to marshal response: %w", err)
 			}
 
-			return utils.NewToolResultText(string(r)), nil, nil
+			return utils.NewToolResultText(string(r)), release, nil
 		},
 	)
 }

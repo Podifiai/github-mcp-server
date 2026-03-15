@@ -16,5 +16,30 @@
     ],
     "type": "object"
   },
-  "name": "list_issue_types"
+  "name": "list_issue_types",
+  "outputSchema": {
+    "properties": {
+      "issue_types": {
+        "items": {
+          "properties": {
+            "color": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "id": {
+              "type": "integer"
+            },
+            "name": {
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "type": "array"
+      }
+    },
+    "type": "object"
+  }
 }

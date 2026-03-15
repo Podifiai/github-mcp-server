@@ -61,7 +61,7 @@ func GetMe(t translations.TranslationHelperFunc) inventory.ServerTool {
 			},
 		},
 		nil,
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, _ map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, _ map[string]any) (*mcp.CallToolResult, *MinimalUser, error) {
 			client, err := deps.GetClient(ctx)
 			if err != nil {
 				return utils.NewToolResultErrorFromErr("failed to get GitHub client", err), nil, nil
@@ -77,7 +77,7 @@ func GetMe(t translations.TranslationHelperFunc) inventory.ServerTool {
 			}
 
 			// Create minimal user representation instead of returning full user object
-			minimalUser := MinimalUser{
+			minimalUser := &MinimalUser{
 				Login:      user.GetLogin(),
 				ID:         user.GetID(),
 				ProfileURL: user.GetHTMLURL(),
@@ -103,7 +103,7 @@ func GetMe(t translations.TranslationHelperFunc) inventory.ServerTool {
 				},
 			}
 
-			return MarshalledTextResult(minimalUser), nil, nil
+			return MarshalledTextResult(minimalUser), minimalUser, nil
 		},
 	)
 }
@@ -117,6 +117,16 @@ type TeamInfo struct {
 type OrganizationTeams struct {
 	Org   string     `json:"org"`
 	Teams []TeamInfo `json:"teams"`
+}
+
+// GetTeamsResult wraps the slice return for structured content output schema compatibility.
+type GetTeamsResult struct {
+	Organizations []OrganizationTeams `json:"organizations"`
+}
+
+// GetTeamMembersResult wraps the slice return for structured content output schema compatibility.
+type GetTeamMembersResult struct {
+	Members []string `json:"members"`
 }
 
 func GetTeams(t translations.TranslationHelperFunc) inventory.ServerTool {
@@ -140,7 +150,7 @@ func GetTeams(t translations.TranslationHelperFunc) inventory.ServerTool {
 			},
 		},
 		[]scopes.Scope{scopes.ReadOrg},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *GetTeamsResult, error) {
 			user, err := OptionalParam[string](args, "user")
 			if err != nil {
 				return utils.NewToolResultError(err.Error()), nil, nil
@@ -212,7 +222,7 @@ func GetTeams(t translations.TranslationHelperFunc) inventory.ServerTool {
 				organizations = append(organizations, orgTeams)
 			}
 
-			return MarshalledTextResult(organizations), nil, nil
+			return MarshalledTextResult(organizations), &GetTeamsResult{Organizations: organizations}, nil
 		},
 	)
 }
@@ -243,7 +253,7 @@ func GetTeamMembers(t translations.TranslationHelperFunc) inventory.ServerTool {
 			},
 		},
 		[]scopes.Scope{scopes.ReadOrg},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *GetTeamMembersResult, error) {
 			org, err := RequiredParam[string](args, "org")
 			if err != nil {
 				return utils.NewToolResultError(err.Error()), nil, nil
@@ -283,7 +293,7 @@ func GetTeamMembers(t translations.TranslationHelperFunc) inventory.ServerTool {
 				members = append(members, string(member.Login))
 			}
 
-			return MarshalledTextResult(members), nil, nil
+			return MarshalledTextResult(members), &GetTeamMembersResult{Members: members}, nil
 		},
 	)
 }

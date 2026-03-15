@@ -563,6 +563,12 @@ func GetIssueLabels(ctx context.Context, client *githubv4.Client, owner string, 
 
 }
 
+// ListIssueTypesResult wraps the slice return for structured content compatibility.
+// The SDK requires Out types to produce object schemas; slices produce array schemas.
+type ListIssueTypesResult struct {
+	IssueTypes []*github.IssueType `json:"issue_types"`
+}
+
 // ListIssueTypes creates a tool to list defined issue types for an organization. This can be used to understand supported issue type values for creating or updating issues.
 func ListIssueTypes(t translations.TranslationHelperFunc) inventory.ServerTool {
 	return NewTool(
@@ -584,9 +590,26 @@ func ListIssueTypes(t translations.TranslationHelperFunc) inventory.ServerTool {
 				},
 				Required: []string{"owner"},
 			},
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"issue_types": {
+						Type: "array",
+						Items: &jsonschema.Schema{
+							Type: "object",
+							Properties: map[string]*jsonschema.Schema{
+								"id":          {Type: "integer"},
+								"name":        {Type: "string"},
+								"description": {Type: "string"},
+								"color":       {Type: "string"},
+							},
+						},
+					},
+				},
+			},
 		},
 		[]scopes.Scope{scopes.ReadOrg},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *ListIssueTypesResult, error) {
 			owner, err := RequiredParam[string](args, "owner")
 			if err != nil {
 				return utils.NewToolResultError(err.Error()), nil, nil
@@ -615,7 +638,7 @@ func ListIssueTypes(t translations.TranslationHelperFunc) inventory.ServerTool {
 				return utils.NewToolResultErrorFromErr("failed to marshal issue types", err), nil, nil
 			}
 
-			return utils.NewToolResultText(string(r)), nil, nil
+			return utils.NewToolResultText(string(r)), &ListIssueTypesResult{IssueTypes: issueTypes}, nil
 		})
 }
 
@@ -652,9 +675,28 @@ func AddIssueComment(t translations.TranslationHelperFunc) inventory.ServerTool 
 				},
 				Required: []string{"owner", "repo", "issue_number", "body"},
 			},
+			OutputSchema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"id":         {Type: "integer"},
+					"html_url":   {Type: "string"},
+					"body":       {Type: "string"},
+					"created_at": {Type: "string"},
+					"updated_at": {Type: "string"},
+					"user": {
+						Type: "object",
+						Properties: map[string]*jsonschema.Schema{
+							"login":      {Type: "string"},
+							"id":         {Type: "integer"},
+							"avatar_url": {Type: "string"},
+							"html_url":   {Type: "string"},
+						},
+					},
+				},
+			},
 		},
 		[]scopes.Scope{scopes.Repo},
-		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, deps ToolDependencies, _ *mcp.CallToolRequest, args map[string]any) (*mcp.CallToolResult, *github.IssueComment, error) {
 			owner, err := RequiredParam[string](args, "owner")
 			if err != nil {
 				return utils.NewToolResultError(err.Error()), nil, nil
@@ -699,7 +741,7 @@ func AddIssueComment(t translations.TranslationHelperFunc) inventory.ServerTool 
 				return utils.NewToolResultErrorFromErr("failed to marshal response", err), nil, nil
 			}
 
-			return utils.NewToolResultText(string(r)), nil, nil
+			return utils.NewToolResultText(string(r)), createdComment, nil
 		})
 }
 
@@ -1619,7 +1661,7 @@ func ListIssues(t translations.TranslationHelperFunc) inventory.ServerTool {
 			if err != nil {
 				return nil, nil, fmt.Errorf("failed to marshal issues: %w", err)
 			}
-			return utils.NewToolResultText(string(out)), nil, nil
+			return utils.NewToolResultText(string(out)), response, nil
 		})
 }
 

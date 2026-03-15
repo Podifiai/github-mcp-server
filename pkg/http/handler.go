@@ -202,6 +202,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		ContentWindowSize: h.config.ContentWindowSize,
 		Logger:            h.logger,
 		RepoAccessTTL:     h.config.RepoAccessCacheTTL,
+		StructuredContent: h.config.StructuredContent,
 		// Explicitly set empty capabilities. inv.ForMCPRequest currently returns nothing for Initialize.
 		ServerOptions: []github.MCPServerOption{
 			func(so *mcp.ServerOptions) {
@@ -234,11 +235,12 @@ func DefaultGitHubMCPServerFactory(r *http.Request, deps github.ToolDependencies
 }
 
 // DefaultInventoryFactory creates the default inventory factory for HTTP mode
-func DefaultInventoryFactory(_ *ServerConfig, t translations.TranslationHelperFunc, featureChecker inventory.FeatureFlagChecker, scopeFetcher scopes.FetcherInterface) InventoryFactoryFunc {
+func DefaultInventoryFactory(cfg *ServerConfig, t translations.TranslationHelperFunc, featureChecker inventory.FeatureFlagChecker, scopeFetcher scopes.FetcherInterface) InventoryFactoryFunc {
 	return func(r *http.Request) (*inventory.Inventory, error) {
 		b := github.NewInventory(t).
 			WithDeprecatedAliases(github.DeprecatedToolAliases).
-			WithFeatureChecker(featureChecker)
+			WithFeatureChecker(featureChecker).
+			WithStructuredContent(cfg.StructuredContent)
 
 		b = InventoryFiltersForRequest(r, b)
 		b = PATScopeFilter(b, r, scopeFetcher)

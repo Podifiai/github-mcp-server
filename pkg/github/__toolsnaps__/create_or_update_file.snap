@@ -44,5 +44,41 @@
     ],
     "type": "object"
   },
-  "name": "create_or_update_file"
+  "name": "create_or_update_file",
+  "outputSchema": {
+    "properties": {
+      "commit": {
+        "properties": {
+          "html_url": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "sha": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "content": {
+        "properties": {
+          "html_url": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "sha": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      }
+    },
+    "type": "object"
+  }
 }

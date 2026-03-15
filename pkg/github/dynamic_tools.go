@@ -103,7 +103,7 @@ func EnableToolset(r *inventory.Inventory) inventory.ServerTool {
 				// Get tools for this toolset and register them with the managed deps
 				toolsForToolset := deps.Inventory.ToolsForToolset(toolsetID)
 				for _, st := range toolsForToolset {
-					st.RegisterFunc(deps.Server, deps.ToolDeps)
+					st.RegisterFunc(deps.Server, deps.ToolDeps, deps.Inventory.StructuredContent())
 				}
 
 				return utils.NewToolResultText(fmt.Sprintf("Toolset %s enabled with %d tools", toolsetName, len(toolsForToolset))), nil, nil

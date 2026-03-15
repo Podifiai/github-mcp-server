@@ -52,5 +52,30 @@
     ],
     "type": "object"
   },
-  "name": "push_files"
+  "name": "push_files",
+  "outputSchema": {
+    "properties": {
+      "object": {
+        "properties": {
+          "sha": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "ref": {
+        "type": "string"
+      },
+      "url": {
+        "type": "string"
+      }
+    },
+    "type": "object"
+  }
 }

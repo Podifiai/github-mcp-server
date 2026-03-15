@@ -32,5 +32,59 @@
     ],
     "type": "object"
   },
-  "name": "list_releases"
+  "name": "list_releases",
+  "outputSchema": {
+    "properties": {
+      "releases": {
+        "items": {
+          "properties": {
+            "author": {
+              "properties": {
+                "avatar_url": {
+                  "type": "string"
+                },
+                "html_url": {
+                  "type": "string"
+                },
+                "id": {
+                  "type": "integer"
+                },
+                "login": {
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "body": {
+              "type": "string"
+            },
+            "draft": {
+              "type": "boolean"
+            },
+            "html_url": {
+              "type": "string"
+            },
+            "id": {
+              "type": "integer"
+            },
+            "name": {
+              "type": "string"
+            },
+            "prerelease": {
+              "type": "boolean"
+            },
+            "published_at": {
+              "type": "string"
+            },
+            "tag_name": {
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "type": "array"
+      }
+    },
+    "type": "object"
+  }
 }
