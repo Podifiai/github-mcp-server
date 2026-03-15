@@ -539,8 +539,8 @@ func RequestCopilotReview(t translations.TranslationHelperFunc) inventory.Server
 				return ghErrors.NewGitHubAPIStatusErrorResponse(ctx, "failed to request copilot review", resp, bodyBytes), nil, nil
 			}
 
-			// Return nothing on success, as there's not much value in returning the Pull Request itself
-			return utils.NewToolResultText(""), nil, nil
+			message := "Copilot review requested successfully"
+			return utils.NewToolResultText(message), &PullRequestReviewWriteResult{Message: message}, nil
 		})
 }
 

@@ -1356,7 +1356,9 @@ func createProjectStatusUpdate(ctx context.Context, gqlClient *githubv4.Client, 
 		return nil, nil, fmt.Errorf("failed to marshal response: %w", err)
 	}
 
-	return utils.NewToolResultText(string(r)), nil, nil
+	toolResult := utils.NewToolResultText(string(r))
+	toolResult.StructuredContent = result
+	return toolResult, result, nil
 }
 
 // listProjectStatusUpdates lists status updates for a project via GraphQL.
@@ -1435,7 +1437,9 @@ func listProjectStatusUpdates(ctx context.Context, gqlClient *githubv4.Client, a
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to marshal response: %w", err)
 	}
-	return utils.NewToolResultText(string(r)), nil, nil
+	toolResult := utils.NewToolResultText(string(r))
+	toolResult.StructuredContent = response
+	return toolResult, response, nil
 }
 
 // getProjectStatusUpdate fetches a single status update by its node ID via GraphQL.
@@ -1459,7 +1463,9 @@ func getProjectStatusUpdate(ctx context.Context, gqlClient *githubv4.Client, sta
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to marshal response: %w", err)
 	}
-	return utils.NewToolResultText(string(r)), nil, nil
+	toolResult := utils.NewToolResultText(string(r))
+	toolResult.StructuredContent = update
+	return toolResult, update, nil
 }
 
 type pageInfo struct {

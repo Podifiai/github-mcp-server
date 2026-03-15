@@ -685,7 +685,7 @@ func CreatePullRequest(t translations.TranslationHelperFunc) inventory.ServerToo
 			uiSubmitted, _ := OptionalParam[bool](args, "_ui_submitted")
 
 			if deps.GetFlags(ctx).InsidersMode && clientSupportsUI(ctx, req) && !uiSubmitted {
-				return utils.NewToolResultText(fmt.Sprintf("Ready to create a pull request in %s/%s. IMPORTANT: The PR has NOT been created yet. Do NOT tell the user the PR was created. The user MUST click Submit in the form to create it.", owner, repo)), nil, nil
+				return utils.NewToolResultText(fmt.Sprintf("Ready to create a pull request in %s/%s. IMPORTANT: The PR has NOT been created yet. Do NOT tell the user the PR was created. The user MUST click Submit in the form to create it.", owner, repo)), &MinimalResponse{}, nil
 			}
 
 			// When creating PR, title/head/base are required
@@ -1733,7 +1733,7 @@ func UpdatePullRequestBranch(t translations.TranslationHelperFunc) inventory.Ser
 				// Check if it's an acceptedError. An acceptedError indicates that the update is in progress,
 				// and it's not a real error.
 				if resp != nil && resp.StatusCode == http.StatusAccepted && isAcceptedError(err) {
-					return utils.NewToolResultText("Pull request branch update is in progress"), nil, nil
+					return utils.NewToolResultText("Pull request branch update is in progress"), &github.PullRequestBranchUpdateResponse{}, nil
 				}
 				return ghErrors.NewGitHubAPIErrorResponse(ctx,
 					"failed to update pull request branch",

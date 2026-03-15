@@ -188,7 +188,10 @@ func NewServerToolWithContextHandler[In any, Out any](tool mcp.Tool, toolset Too
 				if err := json.Unmarshal(req.Params.Arguments, &arguments); err != nil {
 					return nil, err
 				}
-				resp, _, err := handler(ctx, req, arguments)
+				resp, out, err := handler(ctx, req, arguments)
+				if resp != nil && !resp.IsError && resp.StructuredContent == nil && hasStructuredContentValue(any(out)) {
+					resp.StructuredContent = out
+				}
 				return resp, err
 			}
 		},
@@ -265,4 +268,21 @@ func extractTextFromResult(res *mcp.CallToolResult) string {
 		return "tool error"
 	}
 	return msg
+}
+
+// hasStructuredContentValue reports whether v should be attached as structured content.
+// Nil pointers/maps/slices/interfaces should be skipped, but concrete values and empty
+// structs are valid structured content.
+func hasStructuredContentValue(v any) bool {
+	if v == nil {
+		return false
+	}
+
+	rv := reflect.ValueOf(v)
+	switch rv.Kind() {
+	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Pointer, reflect.Slice:
+		return !rv.IsNil()
+	default:
+		return true
+	}
 }

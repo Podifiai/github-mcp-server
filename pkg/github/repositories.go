@@ -1055,7 +1055,7 @@ func ForkRepository(t translations.TranslationHelperFunc) inventory.ServerTool {
 				// Check if it's an acceptedError. An acceptedError indicates that the update is in progress,
 				// and it's not a real error.
 				if resp != nil && resp.StatusCode == http.StatusAccepted && isAcceptedError(err) {
-					return utils.NewToolResultText("Fork is in progress"), nil, nil
+					return utils.NewToolResultText("Fork is in progress"), &MinimalResponse{}, nil
 				}
 				return ghErrors.NewGitHubAPIErrorResponse(ctx,
 					"failed to fork repository",

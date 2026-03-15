@@ -134,7 +134,9 @@ func GetMe(t translations.TranslationHelperFunc) inventory.ServerTool {
 				},
 			}
 
-			return MarshalledTextResult(minimalUser), minimalUser, nil
+			result := MarshalledTextResult(minimalUser)
+			result.StructuredContent = minimalUser
+			return result, minimalUser, nil
 		},
 	)
 }
@@ -278,7 +280,10 @@ func GetTeams(t translations.TranslationHelperFunc) inventory.ServerTool {
 				organizations = append(organizations, orgTeams)
 			}
 
-			return MarshalledTextResult(organizations), &GetTeamsResult{Organizations: organizations}, nil
+			typedResult := &GetTeamsResult{Organizations: organizations}
+			result := MarshalledTextResult(organizations)
+			result.StructuredContent = typedResult
+			return result, typedResult, nil
 		},
 	)
 }
@@ -358,7 +363,10 @@ func GetTeamMembers(t translations.TranslationHelperFunc) inventory.ServerTool {
 				members = append(members, string(member.Login))
 			}
 
-			return MarshalledTextResult(members), &GetTeamMembersResult{Members: members}, nil
+			typedResult := &GetTeamMembersResult{Members: members}
+			result := MarshalledTextResult(members)
+			result.StructuredContent = typedResult
+			return result, typedResult, nil
 		},
 	)
 }

@@ -2184,6 +2184,27 @@ func TestWithStructuredContent_DefaultsToFalse(t *testing.T) {
 	require.False(t, inv.StructuredContent())
 }
 
+func TestNewServerToolWithContextHandler_NonTypedPathSetsStructuredContent(t *testing.T) {
+	tool := mockTypedToolWithOutput("typed_tool", "repos", &mockOutput{Value: "hello"})
+	handler := tool.Handler(nil)
+
+	req := &mcp.CallToolRequest{
+		Params: &mcp.CallToolParamsRaw{
+			Name:      "typed_tool",
+			Arguments: json.RawMessage(`{}`),
+		},
+	}
+
+	result, err := handler(context.Background(), req)
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	require.NotNil(t, result.StructuredContent)
+
+	typed, ok := result.StructuredContent.(*mockOutput)
+	require.True(t, ok)
+	require.Equal(t, "hello", typed.Value)
+}
+
 func TestWithStructuredContent_PreservedInForMCPRequest(t *testing.T) {
 	tool := mockTypedToolWithOutput("typed_tool", "repos", &mockOutput{Value: "hello"})
 	inv := mustBuild(t, NewBuilder().SetTools([]ServerTool{tool}).WithToolsets([]string{"all"}).WithStructuredContent(true))
