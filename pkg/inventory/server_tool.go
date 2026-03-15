@@ -189,7 +189,18 @@ func NewServerToolWithContextHandler[In any, Out any](tool mcp.Tool, toolset Too
 			if len(toolCopy.Icons) == 0 {
 				toolCopy.Icons = toolset.Icons()
 			}
-			mcp.AddTool(s, &toolCopy, handler)
+			// Wrap handler to clear Content on success so the SDK regenerates
+			// the text content block from StructuredContent. This ensures the
+			// text block matches the structured data (same key ordering, etc.)
+			// for backwards-compatible clients. On error paths (IsError=true),
+			// we preserve the handler's Content since there is no Out value.
+			mcp.AddTool(s, &toolCopy, func(ctx context.Context, req *mcp.CallToolRequest, args In) (*mcp.CallToolResult, Out, error) {
+				res, out, err := handler(ctx, req, args)
+				if res != nil && !res.IsError {
+					res.Content = nil
+				}
+				return res, out, err
+			})
 		},
 	}
 }
