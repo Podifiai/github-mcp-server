@@ -6,6 +6,7 @@ import (
 	"reflect"
 
 	"github.com/github/github-mcp-server/pkg/octicons"
+	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -202,10 +203,19 @@ func NewServerToolWithContextHandler[In any, Out any](tool mcp.Tool, toolset Too
 			// the text content block from StructuredContent. This ensures the
 			// text block matches the structured data (same key ordering, etc.)
 			// for backwards-compatible clients. On error paths (IsError=true),
-			// we preserve the handler's Content since there is no Out value.
+			// we return a JSON-RPC error to avoid structured content validation.
+			// The spec requires structuredContent to match outputSchema with no
+			// exception for error results, so protocol-level errors are used instead.
 			mcp.AddTool(s, &toolCopy, func(ctx context.Context, req *mcp.CallToolRequest, args In) (*mcp.CallToolResult, Out, error) {
 				res, out, err := handler(ctx, req, args)
-				if res != nil && !res.IsError {
+				if res != nil && res.IsError {
+					var zero Out
+					return nil, zero, &jsonrpc.Error{
+						Code:    jsonrpc.CodeInternalError,
+						Message: extractTextFromResult(res),
+					}
+				}
+				if res != nil {
 					res.Content = nil
 				}
 				return res, out, err
@@ -238,4 +248,21 @@ func NewServerToolWithRawContextHandler(tool mcp.Tool, toolset ToolsetMetadata, 
 			return handler
 		},
 	}
+}
+
+// extractTextFromResult concatenates text content blocks from a CallToolResult.
+func extractTextFromResult(res *mcp.CallToolResult) string {
+	var msg string
+	for _, c := range res.Content {
+		if tc, ok := c.(*mcp.TextContent); ok {
+			if msg != "" {
+				msg += "\n"
+			}
+			msg += tc.Text
+		}
+	}
+	if msg == "" {
+		return "tool error"
+	}
+	return msg
 }
